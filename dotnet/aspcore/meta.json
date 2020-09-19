@@ -1,0 +1,16 @@
+[
+    {
+        "name": null,
+        "type": "singleCore",
+        "category": "platform",
+        "buildCmd": ["dotnet", "publish", "-c", "Release", "bench", "-o", "bench/bin"],
+        "runCmd": ["dotnet", "bench/bin/PlatformBenchmarks.dll", "threadCount=1"]
+    },
+    {
+        "name": null,
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dotnet", "publish", "-c", "Release", "bench", "-o", "bench/bin"],
+        "runCmd": ["dotnet", "bench/bin/PlatformBenchmarks.dll"]
+    }
+]

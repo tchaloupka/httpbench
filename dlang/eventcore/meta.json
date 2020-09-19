@@ -3,12 +3,12 @@
         "name": "cb",
         "type": "singleCore",
         "buildCmd": ["dub", "build", "--single", "http-server.d"],
-        "runCmd": ["http-server"]
+        "runCmd": ["./http-server"]
     },
     {
         "name": "fibers",
         "type": "singleCore",
         "buildCmd": ["dub", "-v", "build", "--single", "http-server-fibers.d"],
-        "runCmd": ["http-server-fibers"]
+        "runCmd": ["./http-server-fibers"]
     }
 ]

@@ -178,7 +178,7 @@ struct StreamConnectionImpl {
 void main()
 {
     print("Starting up...");
-    auto addr = new InternetAddress("127.0.0.1", 8080);
+    auto addr = new InternetAddress("0.0.0.0", 8080);
     auto listener = eventDriver.sockets.listenStream(addr, toDelegate(&onClientConnect));
     enforce(listener != StreamListenSocketFD.invalid, "Failed to listen for connections.");
 

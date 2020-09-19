@@ -7,15 +7,13 @@ import (
     "os"
 )
 
-const helloWorldStr = "Hello, World!"
-
 func main() {
     fmt.Printf("ENV says GOMAXPROCS=%s\n", os.Getenv("GOMAXPROCS"))
     fmt.Printf("GOMAXPROCS says GOMAXPROCS=%d\n", runtime.GOMAXPROCS(0))
     fmt.Printf("runtime says MAXPROCS=%d\n", runtime.NumCPU())
 
     server := &fasthttp.Server{
-        Name:                          "Go01234567890123456789",
+        Name:                          "Go",
         Handler:                       Plaintext,
         DisableHeaderNamesNormalizing: true,
     }
@@ -26,6 +24,6 @@ func main() {
 }
 
 func Plaintext(ctx *fasthttp.RequestCtx) {
-    // ctx.Response.Header.Set("Keep-Alive", "timeout=10")
-    ctx.Response.SetBodyString(helloWorldStr)
+    ctx.Response.Header.Set("X-Test", "0123456789")
+    ctx.Response.SetBodyString("Hello, World!")
 }

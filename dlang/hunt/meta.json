@@ -1,0 +1,30 @@
+[
+    {
+        "name": "hunt-http",
+        "type": "singleCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--single", "hunt-http/app.d"],
+        "runCmd": ["./app", "1"]
+    },
+    {
+        "name": "hunt-http",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--single", "hunt-http/app.d"],
+        "runCmd": ["./app"]
+    },
+    {
+        "name": "hunt-pico",
+        "type": "singleCore",
+        "preCmd": ["./buildpico.sh"],
+        "buildCmd": ["dub", "build", "--root", "hunt-pico"],
+        "runCmd": ["./hunt-pico/hunt-minihttp", "1"]
+    },
+    {
+        "name": "hunt-pico",
+        "type": "multiCore",
+        "preCmd": ["./buildpico.sh"],
+        "buildCmd": ["dub", "build", "--root", "hunt-pico"],
+        "runCmd": ["./hunt-pico/hunt-minihttp"]
+    }
+]

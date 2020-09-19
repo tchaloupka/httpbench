@@ -1,6 +1,7 @@
 [
     {
         "type": "singleCore",
+        "category": "platform",
         "buildCmd": ["dub", "build", "--single", "app.d"],
         "runCmd": ["./app"]
     }

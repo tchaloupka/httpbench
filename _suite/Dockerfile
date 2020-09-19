@@ -1,8 +1,8 @@
 FROM debian:testing
 
 RUN apt update \
-    && apt install -y wget xz-utils build-essential \
-       libxml2 libcurl4 zlib1g-dev git lsof \
+    && apt install -y curl wget xz-utils build-essential \
+       libxml2 libcurl4 zlib1g-dev git lsof cmake \
     && rm -rf /var/lib/apt/lists/* /tmp/*
 
 WORKDIR /opt
@@ -27,14 +27,48 @@ ENV CARGO_HOME="/opt/.cargo" PATH="/opt/.cargo/bin:${PATH}"
 RUN wget -O - https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
 
 # https://github.com/rakyll/hey
-RUN wget --progress=dot:giga \
-    https://storage.googleapis.com/hey-release/hey_linux_amd64 \
-    && chmod +x hey_linux_amd64 \
-    && ln -s /opt/hey_linux_amd64 /usr/bin/hey
+# RUN wget --progress=dot:giga \
+#     https://storage.googleapis.com/hey-release/hey_linux_amd64 \
+#     && chmod +x hey_linux_amd64 \
+#     && ln -s /opt/hey_linux_amd64 /usr/bin/hey
+
+ARG HEY=0.1.4
+RUN wget --progress=dot:giga -O - \
+    https://github.com/rakyll/hey/archive/v$HEY.tar.gz \
+    | tar -xz \
+    && cd hey-$HEY \
+    && go build -o ./bin/hey_linux_amd64 \
+    && cd .. \
+    && mv /opt/hey-$HEY/bin/hey_linux_amd64 /usr/bin/hey \
+    && rm -rf hey-$HEY \
+    && rm -rf /root/go
+
+# .Net Core SDK
+ENV \
+    # Unset ASPNETCORE_URLS from aspnet base image
+    ASPNETCORE_URLS= \
+    DOTNET_SDK_VERSION=5.0.100-rc.1.20452.10 \
+    # Enable correct mode for dotnet watch (only mode supported in a container)
+    DOTNET_USE_POLLING_FILE_WATCHER=true \
+    # Skip extraction of XML docs - generally not useful within an image/container - helps performance
+    NUGET_XMLDOC_MODE=skip \
+    # PowerShell telemetry for docker image usage
+    POWERSHELL_DISTRIBUTION_CHANNEL=PSDocker-DotnetSDK-Ubuntu-20.04
+
+RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$DOTNET_SDK_VERSION/dotnet-sdk-$DOTNET_SDK_VERSION-linux-x64.tar.gz \
+    && dotnet_sha512='d7e709dacc4bb188c2380060d24bfb5b791240dc33af8499fb4a31e1885a9377dad1d1ebc76847432ea67d5e4ac832a31679dc293e09fa6dade28f5fbbe4db9b' \
+    && echo "$dotnet_sha512 dotnet.tar.gz" | sha512sum -c - \
+    && mkdir -p /usr/share/dotnet \
+    && tar -zxf dotnet.tar.gz -C /usr/share/dotnet \
+    && rm dotnet.tar.gz \
+    # Trigger first run experience by running arbitrary cmd
+    && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
+    && dotnet help
 
 RUN go version && echo "---" \
     && ldc2 --version && echo "---" \
     && rustc --version && echo "---" \
+    && dotnet --version && echo "---" \
     echo " END"
 
 WORKDIR /src

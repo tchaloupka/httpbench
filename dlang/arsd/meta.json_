@@ -1,10 +1,11 @@
 [
     {
         "type": "multiCore",
+        "category": "platform",
         "buildCmd": ["dub", "build", "--single", "app.d"],
         "buildEnv": {
             "DFLAGS": "--d-version=embedded_httpd"
         },
-        "runCmd": ["app", "--port", "8080"]
+        "runCmd": ["./app", "--port", "8080"]
     }
 ]

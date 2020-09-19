@@ -10,7 +10,6 @@ import core.thread;
 enum NUMREQ     = 50_000;    // number of requests to test
 enum NUMCLI     = 256;      // number of workers to test with concurrently
 enum REQTIMEOUT = 10;       // number of seconds for request timeout
-enum TESTURL    = "http://127.0.0.1:8080/"; // url to call
 
 // General compiler flags used to build servers (appended to those defined in meta)
 struct CompilerFlags { string envName; string defVal; }
@@ -26,11 +25,8 @@ shared static this()
         )
     ];
 
-    version (Posix)
-    {
-        import core.sys.posix.unistd : isatty;
-        if (isatty(stderr.fileno)) colorOutput = true;
-    }
+    import core.sys.posix.unistd : isatty;
+    if (isatty(stderr.fileno)) colorOutput = true;
 }
 
 LogLevel minLogLevel = LogLevel.info;
@@ -57,11 +53,7 @@ int runVersions(string[] args)
     {
         string compiler;
         string function() getter;
-    }
-
-    static writeRow(string lang, string ver, char pad = ' ')
-    {
-        writeln("| ", lang, pad.repeat(12-lang.length), " | ", ver, pad.repeat(20-ver.length), " |");
+        string ver;
     }
 
     VersionInfo[] versions = [
@@ -78,7 +70,7 @@ int runVersions(string[] args)
                 }
                 `.toFile("go.go");
 
-                auto ret = executeShell("go run go.go");
+                auto ret = executeShell("go run go.go && rm go.go");
                 if (ret.status) return "err";
                 return ret.output;
             }
@@ -101,29 +93,54 @@ int runVersions(string[] args)
                 if (ret.status) return "err";
                 return ret.output.splitter(" ").drop(1).front.strip;
             }
+        ),
+        VersionInfo(
+            "dotnet",
+            {
+                auto ret = executeShell("dotnet --version");
+                if (ret.status) return "err";
+                return ret.output.strip;
+            }
         )
     ];
 
-    writeRow("Language", "Version");
-    writeRow(null, null, '-');
-    foreach (ref v; versions) writeRow(v.compiler, v.getter());
+    size_t maxCmp, maxVer;
+    foreach (ref v; versions)
+    {
+        v.ver = v.getter();
+        maxCmp = max(maxCmp, v.compiler.length, "Language".length);
+        maxVer = max(maxVer, v.ver.length, "Version".length);
+    }
+
+    writeln("| ", "Language".padRight(maxCmp), " | ", "Version".padRight(maxVer), " |");
+    writeln("| ", pad!'-'(maxCmp), " | ", pad!'-'(maxVer), " |");
+    foreach (ref v; versions)
+        writeln("| ", v.compiler.padRight(maxCmp), " | ", v.ver.padRight(maxVer), " |");
     return 0;
 }
 
-struct BenchSettings
-{
-    string url;
-}
+string testURL;
+string remoteHost;
 
 int runBench(string[] args)
 {
     BenchmarkType benchType;
     bool verbose, vverbose, quiet;
+    string host;
+
     auto opts = args.getopt(
         "type|t", "Type of benchmark to run - one of all, singleCore, multiCore (default: all)", &benchType,
-        "verbose", "Verbose output", &verbose,
+        "verbose|v", "Verbose output", &verbose,
         "vverbose", "Most verbose output", &vverbose,
-        "quiet|q", "Output just the results", &quiet
+        "quiet|q", "Output just the results", &quiet,
+        "remote|r",
+            "Use remote host to generate load. Format: [<user>@]<remote_host>.\n"
+            ~ "Test tool (hey) must be installed on the remote host.\n"
+            ~ "Use with --host argument to specify remote addres and port to be called\n"
+            ~ "(if not provided too, it'll be determined from default route).", &remoteHost,
+        "host",
+            "Use specified host instead of default 'localhost'.\n"
+            ~ "Can be used with combination with --remote. Format <host>[:<port>]", &host
     );
 
     if (opts.helpWanted)
@@ -144,6 +161,33 @@ int runBench(string[] args)
         minLogLevel = LogLevel.none;
     }
 
+    if (host)
+    {
+        immutable idx = host.lastIndexOf(':');
+        if (idx > 0) testURL = format!"http://%s/"(host);
+        else testURL = format!"http://%s:8080/"(host);
+    }
+    else if (remoteHost)
+    {
+        // determine box IP from default route
+        auto ret = execute(["ip", "route", "get", "8.8.8.8"]);
+        enforce(ret.status == 0, "Error determining default route: " ~ ret.output);
+
+        static immutable string ipPrefix = "8.8.8.8 via ";
+        auto ips = ret.output.lineSplitter.filter!(a => a.startsWith(ipPrefix)).map!((a)
+        {
+            immutable sidx = a.countUntil(" src ");
+            immutable uidx = a.countUntil(" uid ");
+            enforce(sidx > 0 && uidx > 0 && uidx > sidx, "Unexpected ip output format in line: " ~ a);
+            return a[sidx+5 .. uidx];
+        });
+        enforce(!ips.empty, "Unable to parse default route from: " ~ ret.output);
+        testURL = format!"http://%s:8080/"(ips.front);
+    }
+    else testURL = "http://127.0.0.1:8080/";
+
+    DIAG("Test url: ", testURL);
+
     string rootDir = getcwd();
     // build benchmarks list
     auto benchmarks = rootDir.dirEntries("meta.json", SpanMode.depth).filter!(a => a.isFile)
@@ -162,7 +206,7 @@ int runBench(string[] args)
                         if (pname && !(*pname).isNull) res.name = (*pname).str;
                         res.benchType = t["type"].str.to!BenchmarkType;
                         auto pcat = "category" in t;
-                        if (pcat && !(*pcat).isNull) res.category = (*pcat).str;
+                        if (pcat && !(*pcat).isNull) res.category = (*pcat).str.to!Category;
                         auto ppre = "preCmd" in t;
                         if (ppre && !(*ppre).isNull) res.preCmd = (*ppre).array.map!(a => a.str).array;
                         res.buildCmd = t["buildCmd"].array.map!(a => a.str).array;
@@ -172,7 +216,10 @@ int runBench(string[] args)
                         auto pre = "runEnv" in t;
                         if (pre && !(*pre).isNull) res.runEnv = (*pre).object.byKeyValue.map!(a => tuple(a.key, a.value.str)).assocArray;
                         res.workDir = m.name.dirName;
-                        res.runCmd[0] = buildPath(res.workDir, res.runCmd[0]);
+
+                        res.runCmd[0] = res.runCmd[0].fixLocal(res.workDir);
+                        if (res.preCmd.length) res.preCmd[0] = res.preCmd[0].fixLocal(res.workDir);
+                        if (res.buildCmd.length) res.buildCmd[0] = res.buildCmd[0].fixLocal(res.workDir);
                         res.applyDefaultBuildEnv();
                         return res;
                     }
@@ -207,7 +254,8 @@ int runBench(string[] args)
         if (a.benchType == b.benchType)
         {
             if (a.err || b.err) return false;
-            return a.times[$/2] < b.times[$/2];
+            //return a.med < b.med;
+            return a.rps > b.rps;
         }
         return false;
     });
@@ -215,6 +263,13 @@ int runBench(string[] args)
     benchmarks.genTable();
 
     return 0;
+}
+
+// workaround for #20765 (fixed in dmd-2.094.0)
+static string fixLocal(string cmd, string workDir)
+{
+    if (cmd.startsWith("./")) return buildPath(workDir, cmd);
+    return cmd;
 }
 
 // generate output as Markdown table
@@ -225,16 +280,17 @@ void genTable(Benchmark[] benchmarks)
         auto recs = ch[1].array;
 
         // determine column sizes for even spaces in output
-        size_t maxLang, maxCat, maxFW, maxName, maxErr, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax,
+        size_t maxLang, maxCat, maxFW, maxName, maxErr, maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax,
             max25, max75, max99, maxVals;
 
         foreach (ref b; recs)
         {
             maxLang = max(maxLang, b.language.length, "Language".length);
-            maxCat = max(maxCat, b.category.length, "Category".length);
+            maxCat = max(maxCat, b.category.to!string.length, "Category".length);
             maxFW = max(maxFW, b.framework.length, "Framework".length);
             maxName = max(maxName, b.name.length, "Name".length);
             maxErr = max(maxErr, b.err.length);
+            maxRes = max(maxRes, b.res.length.to!string.length, "Res[B]".length);
             maxRequests = max(maxRequests, b.total.to!string.length, "Req".length);
             maxErrors = max(maxErrors, b.errors.to!string.length, "Err".length);
             maxRPS = max(maxRPS, b.rps.to!string.length, "RPS".length);
@@ -249,30 +305,29 @@ void genTable(Benchmark[] benchmarks)
 
         if (maxErr)
         {
-            auto vals = [maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax, max25, max75, max99];
+            auto vals = [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax, max25, max75, max99];
             maxVals = (vals.length - 1) * 3 + vals.sum();
             if (maxVals < maxErr)
             {
                 auto add = maxErr - maxVals;
-                maxRequests += add;
+                maxRes += add;
                 maxVals += add;
             }
         }
 
-        // language, category, framework, name, req, err, rps, bps, med, min, max, 25%, 75%, 99%
-
         writeln();
         writeln(ch[0]);
         writeln('='.repeat(ch[0].to!string.length));
+        writeln();
         writeln("| ", [
-            "Language".pad(maxLang), "Category".pad(maxCat), "Framework".pad(maxFW), "Name".pad(maxName),
-            "Req".pad(maxRequests), "Err".pad(maxErrors), "RPS".pad(maxRPS), "BPS".pad(maxBPS),
+            "Language".pad(maxLang), "Framework".pad(maxFW), "Category".pad(maxCat), "Name".pad(maxName),
+            "Res[B]".pad(maxRes), "Req".pad(maxRequests), "Err".pad(maxErrors), "RPS".pad(maxRPS), "BPS".pad(maxBPS),
             "med".pad(maxMed), "min".pad(maxMin), "max".pad(maxMax), "25%".pad(max25), "75%".pad(max75),
             "99%".pad(max99)].joiner(" | "), " |");
         writeln(
             "|:",
-            [maxLang, maxCat, maxFW, maxName].map!(a => pad!'-'(a)).joiner(":|:"), ":| ",
-            [maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax, max25, max75, max99]
+            [maxLang, maxFW, maxCat, maxName].map!(a => pad!'-'(a)).joiner(":|:"), ":| ",
+            [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax, max25, max75, max99]
                 .map!(a => pad!'-'(a))
                 .joiner(":| "),
             ":|"
@@ -284,7 +339,10 @@ void genTable(Benchmark[] benchmarks)
                 writeln(
                     "| ",
                     [
-                        b.language.pad(maxLang), b.category.pad(maxCat), b.framework.pad(maxFW), b.name.pad(maxName)
+                        b.language.pad(maxLang),
+                        b.framework.pad(maxFW),
+                        b.category.to!string.pad(maxCat),
+                        b.name.pad(maxName)
                     ].joiner(" | "),
                     " | ",
                     b.err.pad(maxVals),
@@ -296,7 +354,11 @@ void genTable(Benchmark[] benchmarks)
                 writeln(
                     "| ",
                     [
-                        b.language.pad(maxLang), b.category.pad(maxCat), b.framework.pad(maxFW), b.name.pad(maxName),
+                        b.language.pad(maxLang),
+                        b.framework.pad(maxFW),
+                        b.category.to!string.pad(maxCat),
+                        b.name.pad(maxName),
+                        b.res.length.to!string.padLeft(maxRes),
                         b.total.to!string.padLeft(maxRequests),
                         b.errors.to!string.padLeft(maxErrors),
                         b.rps.to!string.padLeft(maxRPS),
@@ -335,6 +397,12 @@ string padLeft(char ch = ' ')(string str, size_t total)
 {
     assert(total >= str.length);
     return format!"%s%s"(ch.repeat(total - str.length), str);
+}
+
+string padRight(char ch = ' ')(string str, size_t total)
+{
+    assert(total >= str.length);
+    return format!"%s%s"(str, ch.repeat(total - str.length));
 }
 
 // applies generic language build flags
@@ -387,8 +455,10 @@ void build(in Benchmark bench)
 Pid start(in Benchmark bench)
 {
     DIAG("Starting up ", bench.id);
-    File f = File("/dev/null", "rw");
-    return spawnProcess(bench.runCmd, f, f, f, bench.runEnv, Config.none, bench.workDir);
+    File fi = File("/dev/null", "r");
+    File fo = File("/dev/null", "w");
+    File fe = File("/dev/null", "w");
+    return spawnProcess(bench.runCmd, fi, fo, fe, bench.runEnv, Config.none, bench.workDir);
     // return spawnProcess(bench.runCmd, stdin, stdout, stderr, bench.runEnv, Config.none, bench.workDir);
 }
 
@@ -434,30 +504,15 @@ void warmup(ref Benchmark bench)
     TRACE(bench.id, " - sample response (", res.data.length, "B):\n-----\n", res.data, "\n-----");
 
     // warmup with benchmark tool
-    auto ret = execute([
-        "hey",
-        "-n", (NUMREQ/10).to!string,
-        "-c", NUMCLI.to!string,
-        "-t", REQTIMEOUT.to!string,
-        TESTURL
-    ]);
+    auto ret = runHey(NUMREQ/10);
     enforce(ret.status == 0, "Warmup failed: " ~ ret.output);
 }
-
-// TODO: testy s disablovaným keepalive
 
 // Collect benchmark request times
 void test(ref Benchmark bench)
 {
     DIAG("Testing ", bench.id);
-    auto ret = execute([
-        "hey",
-        "-n", NUMREQ.to!string,
-        "-c", NUMCLI.to!string,
-        "-t", REQTIMEOUT.to!string,
-        // "-disable-keepalive", // bad impact
-        "-o", "csv", TESTURL
-    ]);
+    auto ret = runHey(NUMREQ, NUMCLI, REQTIMEOUT, "csv");
     enforce(ret.status == 0, "Test failed: " ~ ret.output);
 
     bench.times = ret.output.lineSplitter.drop(1)
@@ -475,6 +530,21 @@ void test(ref Benchmark bench)
         .filter!(a => a[1] == 200)
         .map!(a => a[0]).array;
     bench.times.sort();
+}
+
+auto runHey(int requests = NUMREQ, int clients = NUMCLI, int timeout = REQTIMEOUT, string fmt = null)
+{
+    string[] args = [
+        "hey",
+        "-n", NUMREQ.to!string,
+        "-c", NUMCLI.to!string,
+        "-t", REQTIMEOUT.to!string,
+        // "-disable-keepalive", // bad impact
+    ];
+    if (fmt) args ~= ["-o", fmt];
+    args ~= testURL;
+    if (remoteHost) args = ["ssh", remoteHost, args.joiner(" ").text];
+    return execute(args);
 }
 
 // Kill server
@@ -543,6 +613,13 @@ enum BenchmarkType
     all = 3
 }
 
+enum Category
+{
+    micro,
+    platform,
+    fullStack
+}
+
 struct Benchmark
 {
     // metadata
@@ -550,7 +627,7 @@ struct Benchmark
     string framework;
     string name;
     BenchmarkType benchType;
-    string category;
+    Category category;
     string[] preCmd;
     string[] buildCmd;
     string[string] buildEnv;
@@ -571,14 +648,14 @@ struct Benchmark
         return format!"%s/%s"(language, framework);
     }
 
-    double med() const { return times[$/2]; }
-    double min() const { return times[0]; }
-    double max() const { return times[$-1]; }
-    double rps() const { return total / time; }
-    double under25() const { return times[$/4]; }
-    double under75() const { return times[3*$/4]; }
-    double under99() const { return times[cast(size_t)(ceil($ * 0.99))-1]; }
-    size_t bps() const { return cast(size_t)(total * res.length / time); }
+    double med() const { return times ? times[$/2] : 0; }
+    double min() const { return times ? times[0] : 0; }
+    double max() const { return times ? times[$-1] : 0; }
+    size_t rps() const { return times ? cast(size_t)(total / time) : 0; }
+    double under25() const { return times ? times[$/4] : 0; }
+    double under75() const { return times ? times[3*$/4] : 0; }
+    double under99() const { return times ? times[cast(size_t)(ceil($ * 0.99))-1] : 0; }
+    size_t bps() const { return times ? cast(size_t)(total * res.length / time) : 0; }
     size_t errors() const { return total - times.length; }
 }
 

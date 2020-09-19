@@ -11,12 +11,13 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/").to(|| {
                 HttpResponse::Ok()
                     .content_type("text/plain")
-                    .header("Server", "0123456789012345678901234567890123456")
+                    .header("Server", "rust/actix-web")
+                    .header("X-Test", "0123456789012")
                     .body("Hello, World!")
             }))
     })
     .workers(env::var("WORKERS").map_or(num, |v| v.parse().unwrap()))
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8080")?
     .run()
     .await
 }

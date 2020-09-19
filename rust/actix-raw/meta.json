@@ -4,7 +4,7 @@
         "type": "singleCore",
         "category": "platform",
         "buildCmd": ["cargo", "build", "--release"],
-        "runCmd": ["./target/release/actix-web"],
+        "runCmd": ["./target/release/actix-raw"],
         "runEnv": {
             "WORKERS": "1"
         }
@@ -14,6 +14,6 @@
         "type": "multiCore",
         "category": "platform",
         "buildCmd": ["cargo", "build", "--release"],
-        "runCmd": ["./target/release/actix-web"]
+        "runCmd": ["./target/release/actix-raw"]
     }
 ]

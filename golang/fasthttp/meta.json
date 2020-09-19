@@ -2,9 +2,10 @@
     {
         "name": null,
         "type": "singleCore",
+        "category": "platform",
         "preCmd": ["go", "get"],
         "buildCmd": ["go", "build", "-o", "app", "."],
-        "runCmd": ["app"],
+        "runCmd": ["./app"],
         "runEnv": {
             "GOMAXPROCS": "1"
         }
@@ -12,8 +13,9 @@
     {
         "name": null,
         "type": "multiCore",
+        "category": "platform",
         "preCmd": ["go", "get"],
         "buildCmd": ["go", "build", "-o", "app", "."],
-        "runCmd": ["app"]
+        "runCmd": ["./app"]
     }
 ]
