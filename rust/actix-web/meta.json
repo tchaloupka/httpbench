@@ -1,0 +1,17 @@
+[
+    {
+        "name": null,
+        "type": "singleCore",
+        "buildCmd": ["cargo", "build", "--release"],
+        "runCmd": ["target/release/actix-web"],
+        "runEnv": {
+            "WORKERS": "1"
+        }
+    },
+    {
+        "name": null,
+        "type": "multiCore",
+        "buildCmd": ["cargo", "build", "--release"],
+        "runCmd": ["target/release/actix-web"]
+    }
+]

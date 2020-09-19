@@ -1,0 +1,34 @@
+[
+    {
+        "name": "manual",
+        "type": "singleCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": "--d-version=VibeManualMemoryManagement"
+        },
+        "runCmd": ["app"],
+        "runEnv": { "WORKERS": "1" }
+    },
+    {
+        "name": "gc",
+        "type": "singleCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "runCmd": ["app"],
+        "runEnv": { "WORKERS": "1" }
+    },
+    {
+        "name": "manual",
+        "type": "multiCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": "--d-version=VibeManualMemoryManagement"
+        },
+        "runCmd": ["app"]
+    },
+    {
+        "name": "gc",
+        "type": "multiCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "runCmd": ["app"]
+    }
+]
