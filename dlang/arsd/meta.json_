@@ -4,7 +4,7 @@
         "category": "platform",
         "buildCmd": ["dub", "build", "--single", "app.d"],
         "buildEnv": {
-            "DFLAGS": "--d-version=embedded_httpd"
+            "DFLAGS": "--d-version=embedded_httpd_threads"
         },
         "runCmd": ["./app", "--port", "8080"]
     }
