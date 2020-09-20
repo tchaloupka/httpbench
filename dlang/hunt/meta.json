@@ -4,14 +4,14 @@
         "type": "singleCore",
         "category": "platform",
         "buildCmd": ["dub", "build", "--single", "hunt-http/app.d"],
-        "runCmd": ["./app", "1"]
+        "runCmd": ["./hunt-http/app", "1"]
     },
     {
         "name": "hunt-http",
         "type": "multiCore",
         "category": "platform",
         "buildCmd": ["dub", "build", "--single", "hunt-http/app.d"],
-        "runCmd": ["./app"]
+        "runCmd": ["./hunt-http/app"]
     },
     {
         "name": "hunt-pico",
