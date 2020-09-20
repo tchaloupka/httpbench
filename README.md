@@ -1,20 +1,20 @@
 # http bench
 
-Simple framework to test HTTP servers. Inspired by [Simple Web Benchmark](https://github.com/nuald/simple-web-benchmark) but focused on [dlang][https://dlang.org] frameworks and libraries.
+Simple framework to test HTTP servers, inspired by [Simple Web Benchmark](https://github.com/nuald/simple-web-benchmark) but focused on [dlang](https://dlang.org) frameworks and libraries.
 
-It's measures achievable RPS (requests per second) in a simple plaintext response test scenario.
+It measures achievable RPS (requests per second) in a simple plaintext response test scenario.
 
 Tests were gathered or modified from various places (including [TechEmpower](https://github.com/TechEmpower/FrameworkBenchmarks)).
 
-It uses docker container to build and host services on and can run locally or use load tester from remote host.
+It uses [docker](https://www.docker.com) container to build and host services on and can run locally or use load tester from remote host.
 
-[hey](https://github.com/rakyll/hey) is used as load generator and requests statistics collector.
+[hey](https://github.com/rakyll/hey) is used as a load generator and requests statistics collector.
 
 ## Tests
 
 Tests are divided to two types:
 
-* **singleCore** - services are started in single core mode to measure performance without multiple threads / processes
+* **singleCore** - services are started in single core mode to measure performance without multiple threads / processes (default)
 * **multiCore**  - services are started to use all hosts CPU cores
 
 ## Usage
@@ -62,15 +62,17 @@ As localhost only benchmarking is discouraged (see ie https://www.mnot.net/blog/
 
 Steps:
 
-* on a host that would run servers enter the container shell
+* on a host that would run servers, enter the container shell
 * from that run something like `_suite/runner.d bench -t singleCore -r foo@192.168.0.3 --host 192.168.0.2 dlang`
 
 Where `-r` or `--remote` specifies username and hostname used for executing load tester through ssh.
 `--host` is not in most cases necessary as CLI determines host IP from default route, but it's added for cases when it's needed anyway.
 
+It's easier to generate ssh key and copy it's identity to the load generator host as otherwise underlying ssh command'll ask for password twice for each test (warmup and test itself).
+
 Load tester (hey) must be installed on the load tester host.
 
-Host that generates load should be ideally more preferment.
+Host that generates load should be ideally more prefermant.
 
 ### Frameworks / libraries
 
@@ -106,7 +108,7 @@ It's a microbenchmark as it has no proper http parser, router or response writer
 ##### [hunt](https://github.com/huntlabs/hunt-framework)
 
 * hunt-http - idiomatic use of the framework (HTTP router, parser and all)
-* hunt-pico - highly customized and optimized test that uses [picohttpparser](https://github.com/h2o/picohttpparser) and tweaked handlers for just the test purpose (prebuilt responses, no router, ...) - no wonder that it's relatively hight in [Techempower](https://www.techempower.com/benchmarks/#section=data-r19&hw=ph&test=plaintext)
+* hunt-pico - highly customized and optimized test that uses [picohttpparser](https://github.com/h2o/picohttpparser) and tweaked handlers for just the test purpose (prebuilt responses, no router, ...) - no wonder that it's relatively high in [Techempower](https://www.techempower.com/benchmarks/#section=data-r19&hw=ph&test=plaintext)
 
 ##### [lighttp](https://code.dlang.org/packages/lighttp)
 
@@ -130,7 +132,7 @@ No router or http parser used.
 
 ##### [vibe-d](https://github.com/vibe-d/vibe.d)
 
-Finally most popular [dlang][https://dlang.org] web framework that has it all.
+Finally most popular [dlang](https://dlang.org) web framework that has it all.
 
 #### dotnet
 
@@ -153,3 +155,50 @@ Test uses HTTP parser, but no router.
 
 ### Results
 
+Currently test runner outputs results in a Markdown formatted table.
+
+Column description:
+
+* Res[B] - size of the sample response in bytes - to check responses are of the same size ideally
+* Req - total number of requests load generator generated
+* Err - number of responses with other than 200 OK results
+* RPS - requests per second
+* BPS - bytes per second
+* med - median request time in [ms]
+* min - minimal request time in [ms]
+* max - maximal request time in [ms]
+* 25% - 25% of requests has been completed within this time in [ms]
+* 75% - 75% of requests has been completed within this time in [ms]
+* 99% - 99% of requests has been completed within this time in [ms]
+
+#### Single core results
+
+* **Load generator:** AMD Ryzen 7 3700X 8-Core
+* **Test runner:** Intel(R) Core(TM) i5-5300U CPU @ 2.30GHz
+* **Network:** 1Gbps through cheap gigabit switch
+
+| Language | Framework | Category |   Name    | Res[B] |  Req   | Err |  RPS   |   BPS    | med | min |  max   | 25% | 75%  |  99%  |
+|:--------:|:---------:|:--------:|:---------:| ------:| ------:| ---:| ------:| --------:| ---:| ---:| ------:| ---:| ----:| -----:|
+|  dlang   |  photon   |  micro   |           |    162 | 499968 |   0 | 150719 | 24416621 | 1.2 | 0.1 |   56.9 | 0.8 |  1.8 |     9 |
+|  dlang   |   hunt    |  micro   | hunt-pico |    162 | 499968 |   0 | 136379 | 22093512 | 1.8 | 0.1 |   40.2 | 1.8 |  1.9 |   4.2 |
+|  dlang   | eventcore |  micro   |    cb     |    162 | 499968 |   0 | 126737 | 20531525 | 1.9 | 0.1 |   52.6 | 1.5 |    2 |   8.2 |
+|  dlang   | eventcore |  micro   |  fibers   |    162 | 499968 |   0 | 115996 | 18791428 | 2.1 | 0.1 |   42.5 | 2.1 |  2.2 |   5.9 |
+|  dlang   | vibe-core |  micro   |           |    162 | 499968 |   0 | 104898 | 16993583 | 2.4 | 0.1 |   37.1 | 2.4 |  2.5 |   3.9 |
+|  golang  | fasthttp  | platform |           |    162 | 499968 |   0 |  95183 | 15419653 | 2.6 | 0.1 |   55.7 |   2 |  3.3 |   5.1 |
+|  dotnet  |  aspcore  | platform |           |    162 | 499968 |   0 |  92139 | 14926618 | 2.3 | 0.1 |   55.7 | 2.2 |  2.7 |   6.8 |
+|   rust   | actix-web | platform |           |    162 | 499968 |   0 |  86932 | 14083115 | 2.9 | 0.1 |   55.2 | 2.9 |  2.9 |   4.3 |
+|   rust   | actix-raw | platform |           |    162 | 499968 |   0 |  84858 | 13747040 | 2.9 | 0.1 |   58.7 | 2.9 |    3 |   5.3 |
+|  dlang   |  vibe-d   | platform |    gc     |    162 | 499968 |   0 |  42917 |  6952643 | 5.8 | 0.2 |  478.3 | 5.8 |  5.9 |     8 |
+|  dlang   |  vibe-d   | platform |  manual   |    162 | 499968 |   0 |  34374 |  5568720 | 7.4 | 0.2 |  592.2 | 7.4 |  7.5 |   8.4 |
+|  dlang   |  lighttp  | platform |           |    162 | 219664 |   0 |  21876 |  3544061 | 6.1 | 0.1 | 1678.6 | 4.8 |  7.4 | 211.2 |
+|  dlang   |   hunt    | platform | hunt-http |    162 | 499968 |   0 |  18226 |  2952749 | 2.5 | 0.2 |   60.9 | 0.9 | 41.1 |  48.2 |
+
+
+### Language versions
+
+| Language | Version               |
+| -------- | --------------------- |
+| go       | go1.15.1              |
+| ldc2     | 1.23.0                |
+| rust     | 1.48.0-nightly        |
+| dotnet   | 5.0.100-rc.1.20452.10 |
