@@ -29,5 +29,5 @@ single:
 	_suite/runner.d bench -t singleCore
 
 .PHONY: multi
-single:
+multi:
 	_suite/runner.d bench -t multiCore
