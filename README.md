@@ -56,6 +56,22 @@ Sample:
 _suite/runner.d bench -t singleCore dlang rust # runs all dlang and rust tests
 ```
 
+#### Remote host testing
+
+As localhost only benchmarking is discouraged (see ie https://www.mnot.net/blog/2011/05/18/http_benchmark_rules), CLI supports executing of load tester from the remote host.
+
+Steps:
+
+* on a host that would run servers enter the container shell
+* from that run something like `_suite/runner.d bench -t singleCore -r foo@192.168.0.3 --host 192.168.0.2 dlang`
+
+Where `-r` or `--remote` specifies username and hostname used for executing load tester through ssh.
+`--host` is not in most cases necessary as CLI determines host IP from default route, but it's added for cases when it's needed anyway.
+
+Load tester (hey) must be installed on the load tester host.
+
+Host that generates load should be ideally more preferment.
+
 ### Frameworks / libraries
 
 Some of the top of the [Techempower](https://www.techempower.com/benchmarks/#section=data-r19&hw=ph&test=plaintext) frameworks were added as a reference point.
