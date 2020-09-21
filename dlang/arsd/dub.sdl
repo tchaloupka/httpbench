@@ -1,0 +1,11 @@
+name "app"
+dependency "arsd-official:cgi" version=">=8.4.4"
+
+configuration "threads" {
+    // the threads version works better on benchmarks due to various tradeoffs
+    subConfiguration "arsd-official:cgi" "embedded_httpd_threads"
+}
+
+configuration "processes" {
+    subConfiguration "arsd-official:cgi" "embedded_httpd_processes"
+}
