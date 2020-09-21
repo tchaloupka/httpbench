@@ -6,11 +6,6 @@
 import std;
 import core.thread;
 
-// default values for benchmark parameters
-enum NUMREQ     = 50_000;    // number of requests to test
-enum NUMCLI     = 256;      // number of workers to test with concurrently
-enum REQTIMEOUT = 10;       // number of seconds for request timeout
-
 // General compiler flags used to build servers (appended to those defined in meta)
 struct CompilerFlags { string envName; string defVal; }
 immutable CompilerFlags[string] defaultBuildFlags;
@@ -119,8 +114,12 @@ int runVersions(string[] args)
     return 0;
 }
 
+
 string testURL;
 string remoteHost;
+int numReq = 64_000;        // number of requests to test
+int numClients = 64;        // number of workers to test with concurrently
+int reqTimeout = 10;        // number of seconds for request timeout
 
 int runBench(string[] args)
 {
@@ -129,7 +128,7 @@ int runBench(string[] args)
     string host;
 
     auto opts = args.getopt(
-        "type|t", "Type of benchmark to run - one of all, singleCore, multiCore (default: all)", &benchType,
+        "type", "Type of benchmark to run - one of all, singleCore, multiCore (default: all)", &benchType,
         "verbose|v", "Verbose output", &verbose,
         "vverbose", "Most verbose output", &vverbose,
         "quiet|q", "Output just the results", &quiet,
@@ -140,7 +139,14 @@ int runBench(string[] args)
             ~ "(if not provided too, it'll be determined from default route).", &remoteHost,
         "host",
             "Use specified host instead of default 'localhost'.\n"
-            ~ "Can be used with combination with --remote. Format <host>[:<port>]", &host
+            ~ "Can be used with combination with --remote. Format <host>[:<port>]", &host,
+        // hey params
+        "n", "Number of requests to run. Default is 50 000.", &numReq,
+        "c",
+            "Number of workers to run concurrently. "
+            ~ "Total number of requests cannot be smaller than the concurrency level. Default is 50.",
+            &numClients,
+        "t", "Timeout for each request in seconds. Default is 10, use 0 for infinite.", &reqTimeout
     );
 
     if (opts.helpWanted)
@@ -504,15 +510,16 @@ void warmup(ref Benchmark bench)
     TRACE(bench.id, " - sample response (", res.data.length, "B):\n-----\n", res.data, "\n-----");
 
     // warmup with benchmark tool
-    auto ret = runHey(NUMREQ/10);
+    auto ret = runHey(numReq / 10, numClients, 5);
     enforce(ret.status == 0, "Warmup failed: " ~ ret.output);
+    TRACE(ret.output);
 }
 
 // Collect benchmark request times
 void test(ref Benchmark bench)
 {
     DIAG("Testing ", bench.id);
-    auto ret = runHey(NUMREQ, NUMCLI, REQTIMEOUT, "csv");
+    auto ret = runHey(numReq, numClients, reqTimeout, "csv");
     enforce(ret.status == 0, "Test failed: " ~ ret.output);
 
     bench.times = ret.output.lineSplitter.drop(1)
@@ -532,13 +539,13 @@ void test(ref Benchmark bench)
     bench.times.sort();
 }
 
-auto runHey(int requests = NUMREQ, int clients = NUMCLI, int timeout = REQTIMEOUT, string fmt = null)
+auto runHey(int requests, int clients, int timeout, string fmt = null)
 {
     string[] args = [
         "hey",
-        "-n", NUMREQ.to!string,
-        "-c", NUMCLI.to!string,
-        "-t", REQTIMEOUT.to!string,
+        "-n", requests.to!string,
+        "-c", clients.to!string,
+        "-t", timeout.to!string,
         // "-disable-keepalive", // bad impact
     ];
     if (fmt) args ~= ["-o", fmt];
