@@ -22,12 +22,12 @@ versions:
 
 .PHONY: all
 all:
-	_suite/runner.d bench -t all
+	_suite/runner.d bench --type all
 
 .PHONY: single
 single:
-	_suite/runner.d bench -t singleCore
+	_suite/runner.d bench --type singleCore
 
 .PHONY: multi
 multi:
-	_suite/runner.d bench -t multiCore
+	_suite/runner.d bench --type multiCore
