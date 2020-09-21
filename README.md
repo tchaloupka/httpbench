@@ -91,10 +91,7 @@ I've tried at least make response sizes to be of the same size for all the tests
 
 ##### [arsd-official](https://code.dlang.org/packages/arsd-official)
 
-I've wanted to add this popular library in the mix just for comparison, but test is currently disabled as it doesn't scale at all.
-It doesn't use eventloop but just preforked processes or limited thread pool and is possible to use only with a limited number of concurrent clients with own server implementation.
-
-Sorry @adamdruppe.
+I've wanted to add this popular library in the mix just for comparison.
 
 ##### [eventcore](https://github.com/vibe-d/eventcore)
 
