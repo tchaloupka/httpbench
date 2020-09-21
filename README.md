@@ -185,6 +185,26 @@ Column description:
 * **Test runner:** Intel(R) Core(TM) i5-5300U CPU @ 2.30GHz, kernel 5.8.9
 * **Network:** 1Gbps through cheap gigabit switch
 
+##### 8 concurrent workers
+
+| Language | Framework | Category |   Name    | Res[B] |  Req   | Err |  RPS  |   BPS   | med | min | max  | 25% | 75% | 99%  |
+|:--------:|:---------:|:--------:|:---------:| ------:| ------:| ---:| -----:| -------:| ---:| ---:| ----:| ---:| ---:| ----:|
+|  dlang   |   hunt    |  micro   | hunt-pico |    162 | 640000 |   0 | 43417 | 7033682 | 0.2 | 0.1 |  2.5 | 0.2 | 0.2 |  0.3 |
+|  dlang   | eventcore |  micro   |    cb     |    162 | 640000 |   0 | 43150 | 6990432 | 0.2 | 0.1 |  4.6 | 0.2 | 0.2 |  0.3 |
+|  dlang   | eventcore |  micro   |  fibers   |    162 | 640000 |   0 | 42899 | 6949713 | 0.2 | 0.1 |  2.9 | 0.2 | 0.2 |  0.3 |
+|  dlang   | vibe-core |  micro   |           |    162 | 640000 |   0 | 42794 | 6932659 | 0.2 | 0.1 |  3.6 | 0.2 | 0.2 |  0.3 |
+|  golang  | fasthttp  | platform |           |    162 | 640000 |   0 | 42752 | 6925851 | 0.2 | 0.1 |  2.8 | 0.2 | 0.2 |  0.3 |
+|   rust   | actix-raw | platform |           |    162 | 640000 |   0 | 42442 | 6875741 | 0.2 | 0.1 |  1.5 | 0.2 | 0.2 |  0.3 |
+|   rust   | actix-web | platform |           |    162 | 640000 |   0 | 41624 | 6743107 | 0.2 | 0.1 |  5.9 | 0.2 | 0.2 |  0.3 |
+|  dlang   |  photon   |  micro   |           |    162 | 640000 |   0 | 40126 | 6500558 | 0.2 | 0.1 | 15.8 | 0.2 | 0.2 |  0.3 |
+|  dotnet  |  aspcore  | platform |           |    162 | 640000 |   0 | 39283 | 6363859 | 0.2 | 0.1 | 11.5 | 0.2 | 0.2 |  0.3 |
+|  dlang   |  vibe-d   | platform |  manual   |    162 | 640000 |   0 | 29299 | 4746535 | 0.3 | 0.1 |  1.5 | 0.2 | 0.3 |  0.5 |
+|  dlang   |   arsd    | platform | processes |    192 | 640000 |   0 | 29295 | 5624802 | 0.3 | 0.1 |  8.4 | 0.2 | 0.3 |  0.5 |
+|  dlang   |   arsd    | platform |  threads  |    192 | 640000 |   0 | 28587 | 5488777 | 0.3 | 0.1 | 11.1 | 0.2 | 0.3 |  0.5 |
+|  dlang   |  vibe-d   | platform |    gc     |    162 | 640000 |   0 | 27324 | 4426531 | 0.3 | 0.1 |  2.5 | 0.3 | 0.3 |  0.5 |
+|  dlang   |  lighttp  | platform |           |    162 | 640000 |   0 | 14037 | 2274148 | 0.5 | 0.1 |  9.4 | 0.4 | 0.6 |  1.9 |
+|  dlang   |   hunt    | platform | hunt-http |    162 | 640000 |   0 |  1471 |  238381 | 0.3 | 0.2 | 45.1 | 0.3 | 0.3 | 42.1 |
+
 ##### 64 concurrent workers
 
 | Language | Framework | Category |   Name    | Res[B] |  Req   | Err |  RPS   |   BPS    | med | min |  max   | 25% | 75% | 99%  |
