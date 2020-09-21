@@ -8,6 +8,8 @@ Tests were gathered or modified from various places (including [TechEmpower](htt
 
 It uses [docker](https://www.docker.com) container to build and host services on and can run locally or use load tester from remote host.
 
+Tests can be run without docker too, one just needs to have installed tested language compilers and hey workload generator (but this has been tested on linux only).
+
 [hey](https://github.com/rakyll/hey) is used as a load generator and requests statistics collector.
 
 ## Tests
@@ -53,7 +55,7 @@ Use `_suite/runner.d bench -h` to print out CLI interface help.
 Sample:
 
 ```
-_suite/runner.d bench -t singleCore dlang rust # runs all dlang and rust tests
+_suite/runner.d bench --type singleCore dlang rust # runs all dlang and rust tests
 ```
 
 #### Remote host testing
@@ -63,7 +65,7 @@ As localhost only benchmarking is discouraged (see ie https://www.mnot.net/blog/
 Steps:
 
 * on a host that would run servers, enter the container shell
-* from that run something like `_suite/runner.d bench -t singleCore -r foo@192.168.0.3 --host 192.168.0.2 dlang`
+* from that run something like `_suite/runner.d bench --type singleCore -r foo@192.168.0.3 --host 192.168.0.2 dlang`
 
 Where `-r` or `--remote` specifies username and hostname used for executing load tester through ssh.
 `--host` is not in most cases necessary as CLI determines host IP from default route, but it's added for cases when it's needed anyway.
@@ -93,6 +95,10 @@ I've tried at least make response sizes to be of the same size for all the tests
 
 I've wanted to add this popular library in the mix just for comparison.
 
+##### [during](https://code.dlang.org/packages/during)
+
+**TBD** - Using new asynchronous I/O [io_uring](https://lwn.net/Articles/776703/) it would be interesting to compare against mostly used epoll on Linux systems.
+
 ##### [eventcore](https://github.com/vibe-d/eventcore)
 
 Library that is a basis for [vibe-d](https://github.com/vibe-d/vibe.d) framework. It generalizes event loop against epoll on linux (iocp and kqueue on windows and MacOS).
@@ -112,6 +118,10 @@ It's a microbenchmark as it has no proper http parser, router or response writer
 Found this on [code.dlang.org](https://code.dlang.org/) so I've added it to the mix too.
 
 It has parser, router, and response writer.
+
+##### [mecca](https://code.dlang.org/packages/mecca)
+
+**TBD** - this one should probably come out at the top.
 
 ##### [photon](https://github.com/DmitryOlshansky/photon)
 
@@ -170,26 +180,50 @@ Column description:
 
 #### Single core results
 
-* **Load generator:** AMD Ryzen 7 3700X 8-Core
-* **Test runner:** Intel(R) Core(TM) i5-5300U CPU @ 2.30GHz
+* **Load generator:** AMD Ryzen 7 3700X 8-Core, kernel 5.7.15
+* **Load generator params:** `hey -n 640000 -c 64 -t 10`
+* **Test runner:** Intel(R) Core(TM) i5-5300U CPU @ 2.30GHz, kernel 5.8.9
 * **Network:** 1Gbps through cheap gigabit switch
+
+##### 64 concurrent workers
+
+| Language | Framework | Category |   Name    | Res[B] |  Req   | Err |  RPS   |   BPS    | med | min |  max   | 25% | 75% | 99%  |
+|:--------:|:---------:|:--------:|:---------:| ------:| ------:| ---:| ------:| --------:| ---:| ---:| ------:| ---:| ---:| ----:|
+|  dlang   | eventcore |  micro   |    cb     |    162 | 640000 |   0 | 166359 | 26950170 | 0.4 | 0.1 |   11.4 | 0.3 | 0.4 |    1 |
+|  dlang   |   hunt    |  micro   | hunt-pico |    162 | 640000 |   0 | 158474 | 25672898 | 0.3 | 0.1 |   16.9 | 0.3 | 0.4 |  1.4 |
+|  dlang   |  photon   |  micro   |           |    162 | 640000 |   0 | 143933 | 23317215 | 0.3 | 0.1 |   17.8 | 0.2 | 0.3 |  3.8 |
+|  dlang   | eventcore |  micro   |  fibers   |    162 | 640000 |   0 | 120793 | 19568540 | 0.5 | 0.1 |   18.5 | 0.5 | 0.5 |    1 |
+|  dlang   | vibe-core |  micro   |           |    162 | 640000 |   0 | 100065 | 16210638 | 0.6 | 0.1 |   12.3 | 0.4 | 0.7 |  2.5 |
+|   rust   | actix-raw | platform |           |    162 | 640000 |   0 |  95107 | 15407477 | 0.6 | 0.1 |   18.6 | 0.5 | 0.7 |  1.6 |
+|  golang  | fasthttp  | platform |           |    162 | 640000 |   0 |  86754 | 14054303 | 0.7 | 0.1 |   14.4 | 0.4 |   1 |  1.5 |
+|   rust   | actix-web | platform |           |    162 | 640000 |   0 |  84898 | 13753581 | 0.7 | 0.1 |   17.7 | 0.7 | 0.7 |  1.3 |
+|  dotnet  |  aspcore  | platform |           |    162 | 640000 |   0 |  79620 | 12898570 | 0.6 | 0.1 |   34.6 | 0.5 | 1.1 |  1.6 |
+|  dlang   |  vibe-d   | platform |    gc     |    162 | 640000 |   0 |  41535 |  6728753 | 1.4 | 0.2 |   20.1 | 1.4 | 1.6 |  2.4 |
+|  dlang   |  vibe-d   | platform |  manual   |    162 | 640000 |   0 |  34603 |  5605809 | 1.8 | 0.2 |   38.4 | 1.4 |   2 |  4.8 |
+|  dlang   |  lighttp  | platform |           |    162 | 640000 |   0 |  20699 |  3353288 | 2.8 | 0.2 |  208.8 | 2.2 | 3.6 |  7.9 |
+|  dlang   |   arsd    | platform |  threads  |    192 | 639904 |   0 |  15634 |  3001821 | 0.3 | 0.1 | 8797.6 | 0.2 | 0.3 |  0.5 |
+|  dlang   |   arsd    | platform | processes |    192 | 639903 |   0 |  15193 |  2917227 | 0.3 | 0.1 | 5865.8 | 0.2 | 0.3 |  0.5 |
+|  dlang   |   hunt    | platform | hunt-http |    162 | 640000 |   0 |   7936 |  1285719 | 0.4 | 0.2 |   54.4 | 0.3 | 1.2 | 43.1 |
+
+##### 256 concurrent workers
 
 | Language | Framework | Category |   Name    | Res[B] |  Req   | Err |  RPS   |   BPS    | med | min |  max   | 25% | 75%  |  99%  |
 |:--------:|:---------:|:--------:|:---------:| ------:| ------:| ---:| ------:| --------:| ---:| ---:| ------:| ---:| ----:| -----:|
-|  dlang   |  photon   |  micro   |           |    162 | 499968 |   0 | 150719 | 24416621 | 1.2 | 0.1 |   56.9 | 0.8 |  1.8 |     9 |
-|  dlang   |   hunt    |  micro   | hunt-pico |    162 | 499968 |   0 | 136379 | 22093512 | 1.8 | 0.1 |   40.2 | 1.8 |  1.9 |   4.2 |
-|  dlang   | eventcore |  micro   |    cb     |    162 | 499968 |   0 | 126737 | 20531525 | 1.9 | 0.1 |   52.6 | 1.5 |    2 |   8.2 |
-|  dlang   | eventcore |  micro   |  fibers   |    162 | 499968 |   0 | 115996 | 18791428 | 2.1 | 0.1 |   42.5 | 2.1 |  2.2 |   5.9 |
-|  dlang   | vibe-core |  micro   |           |    162 | 499968 |   0 | 104898 | 16993583 | 2.4 | 0.1 |   37.1 | 2.4 |  2.5 |   3.9 |
-|  golang  | fasthttp  | platform |           |    162 | 499968 |   0 |  95183 | 15419653 | 2.6 | 0.1 |   55.7 |   2 |  3.3 |   5.1 |
-|  dotnet  |  aspcore  | platform |           |    162 | 499968 |   0 |  92139 | 14926618 | 2.3 | 0.1 |   55.7 | 2.2 |  2.7 |   6.8 |
-|   rust   | actix-web | platform |           |    162 | 499968 |   0 |  86932 | 14083115 | 2.9 | 0.1 |   55.2 | 2.9 |  2.9 |   4.3 |
-|   rust   | actix-raw | platform |           |    162 | 499968 |   0 |  84858 | 13747040 | 2.9 | 0.1 |   58.7 | 2.9 |    3 |   5.3 |
-|  dlang   |  vibe-d   | platform |    gc     |    162 | 499968 |   0 |  42917 |  6952643 | 5.8 | 0.2 |  478.3 | 5.8 |  5.9 |     8 |
-|  dlang   |  vibe-d   | platform |  manual   |    162 | 499968 |   0 |  34374 |  5568720 | 7.4 | 0.2 |  592.2 | 7.4 |  7.5 |   8.4 |
-|  dlang   |  lighttp  | platform |           |    162 | 219664 |   0 |  21876 |  3544061 | 6.1 | 0.1 | 1678.6 | 4.8 |  7.4 | 211.2 |
-|  dlang   |   hunt    | platform | hunt-http |    162 | 499968 |   0 |  18226 |  2952749 | 2.5 | 0.2 |   60.9 | 0.9 | 41.1 |  48.2 |
-
+|  dlang   |  photon   |  micro   |           |    162 | 640000 |   0 | 138588 | 22451277 | 1.2 | 0.1 |   45.4 |   1 |  1.8 |   9.9 |
+|  dlang   | eventcore |  micro   |  fibers   |    162 | 640000 |   0 | 117595 | 19050418 | 2.2 | 0.1 |   32.7 | 1.7 |  2.3 |   5.3 |
+|  dlang   | eventcore |  micro   |    cb     |    162 | 640000 |   0 | 111938 | 18134116 | 1.9 | 0.1 |   39.1 | 1.6 |  2.7 |   7.3 |
+|  dlang   |   hunt    |  micro   | hunt-pico |    162 | 640000 |   0 | 105760 | 17133225 | 2.4 | 0.1 |   42.7 | 1.9 |  2.7 |   6.8 |
+|  dlang   | vibe-core |  micro   |           |    162 | 640000 |   0 |  96075 | 15564295 | 2.6 | 0.1 |   41.9 | 2.5 |  2.7 |   4.3 |
+|   rust   | actix-raw | platform |           |    162 | 640000 |   0 |  85098 | 13785950 | 2.7 | 0.1 |   38.6 | 2.4 |  3.1 |   7.8 |
+|  golang  | fasthttp  | platform |           |    162 | 640000 |   0 |  82749 | 13405394 |   3 | 0.1 |   40.1 | 2.2 |  3.7 |   6.9 |
+|   rust   | actix-web | platform |           |    162 | 640000 |   0 |  69662 | 11285266 | 3.1 | 0.1 |   50.2 | 2.9 |  3.6 |  10.5 |
+|  dotnet  |  aspcore  | platform |           |    162 | 640000 |   0 |  43983 |  7125283 | 5.7 | 0.1 |   54.8 | 4.5 |  6.4 |  13.8 |
+|  dlang   |  vibe-d   | platform |    gc     |    162 | 640000 |   0 |  36516 |  5915681 | 6.2 | 0.1 |  454.3 |   6 |  6.7 |    14 |
+|  dlang   |  vibe-d   | platform |  manual   |    162 | 640000 |   0 |  32780 |  5310414 | 6.8 | 0.2 |  290.2 | 6.5 |  8.1 |  16.6 |
+|  dlang   |  lighttp  | platform |           |    162 | 147206 |   0 |  14837 |  2403726 | 8.1 | 0.1 |  837.5 | 5.5 | 11.5 | 216.9 |
+|  dlang   |   hunt    | platform | hunt-http |    162 | 640000 |   0 |  14614 |  2367620 | 5.3 | 0.2 |  104.5 | 1.6 | 41.9 |  61.6 |
+|  dlang   |   arsd    | platform |  threads  |    192 |  58710 |   0 |   5017 |   963314 | 0.3 | 0.1 | 8066.6 | 0.3 |  0.6 |  15.7 |
+|  dlang   |   arsd    | platform | processes |    192 |  87074 |   0 |   1435 |   275542 | 0.3 | 0.1 | 9969.6 | 0.2 |  0.3 |  12.5 |
 
 ### Language versions
 
