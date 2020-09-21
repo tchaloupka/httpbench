@@ -2,20 +2,20 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <!-- <TargetFramework>netcoreapp3.1</TargetFramework> -->
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  
+
   <PropertyGroup>
     <DefineConstants Condition=" '$(IsDatabase)' == 'true' ">$(DefineConstants);DATABASE</DefineConstants>
   </PropertyGroup>
-  
+
   <ItemGroup>
       <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="5.0.0-alpha1" />
     <PackageReference Include="RedHat.AspNetCore.Server.Kestrel.Transport.Linux" Version="3.0.0-*" />
   </ItemGroup>
 </Project>
