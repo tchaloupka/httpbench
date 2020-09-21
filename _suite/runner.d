@@ -120,6 +120,7 @@ string remoteHost;
 int numReq = 64_000;        // number of requests to test
 int numClients = 64;        // number of workers to test with concurrently
 int reqTimeout = 10;        // number of seconds for request timeout
+string testPath;
 
 int runBench(string[] args)
 {
@@ -140,6 +141,8 @@ int runBench(string[] args)
         "host",
             "Use specified host instead of default 'localhost'.\n"
             ~ "Can be used with combination with --remote. Format <host>[:<port>]", &host,
+        // experimental - see #3
+        "path|p", "URL path to call tests on. Default is '/' and currently tests implements just this one.", &testPath,
         // hey params
         "n", "Number of requests to run. Default is 50 000.", &numReq,
         "c",
@@ -192,6 +195,9 @@ int runBench(string[] args)
     }
     else testURL = "http://127.0.0.1:8080/";
 
+    testPath = testPath.stripLeft('/');
+    if (testPath.length) testURL ~= testPath;
+
     DIAG("Test url: ", testURL);
 
     string rootDir = getcwd();
@@ -215,7 +221,8 @@ int runBench(string[] args)
                         if (pcat && !(*pcat).isNull) res.category = (*pcat).str.to!Category;
                         auto ppre = "preCmd" in t;
                         if (ppre && !(*ppre).isNull) res.preCmd = (*ppre).array.map!(a => a.str).array;
-                        res.buildCmd = t["buildCmd"].array.map!(a => a.str).array;
+                        auto pbld = "buildCmd" in t;
+                        if (pbld && !(*pbld).isNull) res.buildCmd = (*pbld).array.map!(a => a.str).array;
                         res.runCmd = t["runCmd"].array.map!(a => a.str).array;
                         auto pbe = "buildEnv" in t;
                         if (pbe && !(*pbe).isNull) res.buildEnv = (*pbe).object.byKeyValue.map!(a => tuple(a.key, a.value.str)).assocArray;
@@ -452,9 +459,12 @@ void build(in Benchmark bench)
         TRACE(ret.output);
     }
 
-    auto ret = execute(bench.buildCmd, bench.buildEnv, Config.none, size_t.max, bench.workDir);
-    enforce(ret.status == 0, format!"%s Build failed: %s"(bench.id, ret.output));
-    TRACE(ret.output);
+    if (bench.buildCmd)
+    {
+        auto ret = execute(bench.buildCmd, bench.buildEnv, Config.none, size_t.max, bench.workDir);
+        enforce(ret.status == 0, format!"%s Build failed: %s"(bench.id, ret.output));
+        TRACE(ret.output);
+    }
 }
 
 // Starts server
@@ -475,12 +485,13 @@ void warmup(ref Benchmark bench)
 
     // wait for service to start responding
     int retry = 5;
+    string localUri = "http://127.0.0.1:8080/" ~ testPath;
     while (true)
     {
         try
         {
-            auto ret = std.net.curl.get("http://127.0.0.1:8080/");
-            enforce(ret == "Hello, World!", "Invalid response: " ~ ret);
+            auto ret = std.net.curl.get(localUri);
+            if (ret != "Hello, World!") WARN("Unexpected response: " ~ ret);
             break;
         }
         catch (Exception ex)
@@ -496,7 +507,7 @@ void warmup(ref Benchmark bench)
 
     // determine size of the response
     Appender!string res;
-    auto http = HTTP("http://127.0.0.1:8080/");
+    auto http = HTTP(localUri);
     http.onReceiveStatusLine = (ln) => res ~= format!"HTTP/%s.%s %s %s\r\n"(ln.majorVersion, ln.minorVersion, ln.code, ln.reason);
     http.onReceiveHeader = (in char[] key, in char[] value) {  res ~= key; res ~= ": "; res ~= value; res ~= "\r\n"; };
     http.onReceive = (ubyte[] data)
