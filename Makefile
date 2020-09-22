@@ -14,7 +14,7 @@ performance_governor:
 
 .PHONY: shell
 shell: performance_governor
-	docker run -it --rm -v $(shell pwd):/src:Z --network="host" httpbench
+	docker run -it --rm --privileged -v $(shell pwd):/src:Z --network="host" httpbench
 
 .PHONY: versions
 versions:
