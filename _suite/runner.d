@@ -3,8 +3,23 @@
 	name "runner"
 +/
 
-import std;
 import core.thread;
+import std.algorithm;
+import std.conv;
+import std.datetime.systime;
+import std.exception;
+import std.file;
+import std.getopt;
+import std.json;
+import std.math;
+import std.net.curl;
+import std.path;
+import std.process;
+import std.range;
+import std.regex;
+import std.stdio;
+import std.string;
+import std.typecons;
 
 // General compiler flags used to build servers (appended to those defined in meta)
 struct CompilerFlags { string envName; string defVal; }

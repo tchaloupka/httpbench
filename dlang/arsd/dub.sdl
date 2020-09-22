@@ -1,4 +1,5 @@
 name "app"
+targetType "executable"
 dependency "arsd-official:cgi" version=">=8.4.4"
 
 configuration "threads" {
