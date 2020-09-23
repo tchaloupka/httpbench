@@ -1,0 +1,11 @@
+[
+    {
+        "name": "raw",
+        "type": "singleCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": "--betterC"
+        },
+        "runCmd": ["./app"]
+    }
+]

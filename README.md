@@ -97,7 +97,14 @@ I've wanted to add this popular library in the mix just for comparison.
 
 ##### [during](https://code.dlang.org/packages/during)
 
+* **raw** - test that tries to be as fast as possible to make a theoretical limit of the used system facility (so no parsers, routers, ... - just plain event loop)
+
 **TBD** - Using new asynchronous I/O [io_uring](https://lwn.net/Articles/776703/) it would be interesting to compare against mostly used epoll on Linux systems.
+
+##### [epoll](https://man7.org/linux/man-pages/man7/epoll.7.html)
+
+Not a library, but just an underlying polling mechanism used by most frameworks.
+Added to test theoretical limit of the system we measure on - same as `during/raw`
 
 ##### [eventcore](https://github.com/vibe-d/eventcore)
 
@@ -121,7 +128,7 @@ It has parser, router, and response writer.
 
 ##### [mecca](https://code.dlang.org/packages/mecca)
 
-**TBD** - this one should probably come out at the top.
+**TBD**
 
 ##### [photon](https://github.com/DmitryOlshansky/photon)
 
