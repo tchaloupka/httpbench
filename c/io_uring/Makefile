@@ -2,7 +2,7 @@ CCFLAGS ?= -Wall -O3 -D_GNU_SOURCE -luring
 
 .PHONY: liburing
 liburing:
-	if [ ! -d "./liburing" ]; then git clone git@github.com:axboe/liburing.git; fi
+	if [ ! -d "./liburing" ]; then git clone https://github.com/axboe/liburing.git; fi
 	+$(MAKE) -C ./liburing
 
 .PHONY: http_uring
