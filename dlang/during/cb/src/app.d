@@ -21,7 +21,7 @@ PClient pool;
 int main()
 {
     Uring io;
-    auto ret = io.setup(1024); // max 1024 entries in submission queue
+    auto ret = io.setup(512); // max 1024 entries in submission queue
     if (ret < 0)
     {
         fprintf(stderr, "Failed to initialize io_uring: %d\n", ret);
@@ -107,6 +107,7 @@ struct ClientContext
 
     this(int fd)
     {
+        debug fprintf(stderr, "createdClient: fd=%d, rd=%p, wr=%p, cl=%p\n", fd, &readOp, &writeOp, &closeOp);
         this.fd = fd;
         readOp.fd = writeOp.fd = closeOp.fd = fd;
         readOp.data = writeOp.data = closeOp.data = cast(void*)&this;
@@ -117,7 +118,7 @@ struct ClientContext
     {
         assert(!readOp.onCompletion, "Already reading");
         immutable res = readBuffer.reserve(1400);
-        if (res < 1400) return -ENOMEM;
+        if (_expect(res < 1400, false)) return -ENOMEM;
 
         readOp.onCompletion = &onReadCompleted;
         readOp.buffer = readBuffer[$-res .. $];
@@ -150,17 +151,11 @@ struct ClientContext
         if (readOp.onCompletion || writeOp.onCompletion) return; // operation still active
 
         debug fprintf(stderr, "Client %d terminating\n", fd);
-        // io.putWith!((ref SubmissionEntry e, ref IOContext ctx)
-        // {
-        //     e.prepClose(ctx.fd);
-        //     e.setUserData(ctx);
-        // })(closeOp);
-
-        readBuffer.clear();
-        writeBuffer.clear();
-        disconnect = false;
-        next = pool;
-        pool = &this;
+        io.putWith!((ref SubmissionEntry e, ref IOContext ctx)
+        {
+            e.prepClose(ctx.fd);
+            e.setUserData(ctx);
+        })(closeOp);
     }
 
     int handleRequest(ref Uring io)
@@ -261,7 +256,7 @@ int registerSignalHandler()
 {
     if (
         signal(SIGPIPE, SIG_IGN) == SIG_ERR // disable SIGPIPE
-        // || signal(SIGINT, &onSignal) == SIG_ERR || signal(SIGTERM, &onSignal) == SIG_ERR
+        || signal(SIGINT, &onSignal) == SIG_ERR || signal(SIGTERM, &onSignal) == SIG_ERR
     )
     {
         perror("signal()");

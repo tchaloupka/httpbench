@@ -283,9 +283,12 @@ struct RingBuffer(T) if (isPowerOf2(T.sizeof))
         if (_expect(capacity == 0, false))
         {
             auto res = alloc(size);
-            if (!res) return 0;
+            if (_expect(!res, false)) return 0;
+            tail += size;
+            return size;
         }
-        else if (avail < size)
+
+        if (_expect(avail < size, false))
         {
             auto newSize = capacity * 2;
             while (newSize < length + size) newSize *= 2; // multiply capacity until old data + requested size doesn't fit
@@ -294,8 +297,7 @@ struct RingBuffer(T) if (isPowerOf2(T.sizeof))
             auto mapRes = map(newSize * T.sizeof);
             version (Windows) auto addr = mapRes.addr;
             else alias addr = mapRes;
-
-            if (!addr) return 0;
+            if (_expect(!addr, false)) return 0;
 
             auto newBuffer = (cast(T*)addr)[0..newSize*2];
             if (length)
@@ -383,7 +385,7 @@ struct RingBuffer(T) if (isPowerOf2(T.sizeof))
         import std.algorithm : moveAll;
         if (_expect(reserve(val.length) < val.length, false)) onOutOfMemoryError();
         immutable idx = mask(tail - val.length, capacity);
-        val.moveAll(buffer[idx .. idx + val.length]);
+        buffer[idx .. idx + val.length] = val[];
     }
 
     /// ditto

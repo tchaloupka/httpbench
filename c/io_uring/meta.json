@@ -1,0 +1,8 @@
+[
+    {
+        "name": "raw",
+        "type": "singleCore",
+        "buildCmd": ["make", "http_uring"],
+        "runCmd": ["./http_uring", "8080"]
+    }
+]

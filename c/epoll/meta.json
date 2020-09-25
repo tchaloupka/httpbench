@@ -1,0 +1,8 @@
+[
+    {
+        "name": "raw",
+        "type": "singleCore",
+        "buildCmd": ["make", "all"],
+        "runCmd": ["./http_epoll", "8080"]
+    }
+]

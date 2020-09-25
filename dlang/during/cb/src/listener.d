@@ -15,6 +15,8 @@ nothrow @nogc:
 
 alias OnClientCB = int function(ref Uring io, int listenFd, int clientFd, const(char)* addr, ushort port);
 
+enum BACKLOG = 1024;
+
 struct AcceptCtx
 {
     IOContext ioCtx;
@@ -37,7 +39,7 @@ int startTCPListener(ref Uring io, ushort port, OnClientCB onClient)
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     serverAddr.sin_port = htons(port);
 
-    if ((listenFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP)) == -1)
+    if ((listenFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
     {
         perror("socket()");
         return -errno;
@@ -58,7 +60,7 @@ int startTCPListener(ref Uring io, ushort port, OnClientCB onClient)
         return -errno;
     }
 
-    if (listen(listenFd, 32) == -1)
+    if (listen(listenFd, BACKLOG) == -1)
     {
         perror("listen()");
         return -errno;
@@ -69,9 +71,10 @@ int startTCPListener(ref Uring io, ushort port, OnClientCB onClient)
     acceptCtx.ioCtx.fd = listenFd;
     acceptCtx.ioCtx.data = cast(void*)onClient;
 
-    int ret = acceptNext(io, acceptCtx);
-    if (ret < 0) return ret;
+    debug fprintf(stderr, "listening on %u: fd=%d, ctx=%p\n", port, listenFd, &acceptCtx);
 
+    immutable ret = acceptNext(io, acceptCtx);
+    if (ret < 0) return ret;
     return listenFd;
 }
 
