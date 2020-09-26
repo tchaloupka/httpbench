@@ -53,6 +53,8 @@ int main(int argc, char *argv[])
     if (sock_listen_fd < 0) {
         error("Error creating socket..\n");
     }
+    const int val = 1;
+    setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
 
     memset((char *)&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
