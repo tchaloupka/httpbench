@@ -7,11 +7,5 @@
             "DFLAGS": "--betterC"
         },
         "runCmd": ["./raw/app"]
-    },
-    {
-        "name": "cb",
-        "type": "singleCore",
-        "buildCmd": ["dub", "build", "--root", "cb"],
-        "runCmd": ["./cb/during_cb"]
     }
 ]

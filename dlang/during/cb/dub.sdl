@@ -1,3 +1,0 @@
-name "during_cb"
-
-dependency "during" version=">=0.3.0-rc"
