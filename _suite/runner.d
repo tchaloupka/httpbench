@@ -45,14 +45,15 @@ int main(string[] args)
 {
     if (args.length < 2)
     {
-        WARN("No command specified, please use one of - [bench, versions]");
+        WARN("No command specified, please use one of - [bench, list, versions]");
         return 1;
     }
     if (args[1] == "bench") return runBench(args[1..$]);
     else if (args[1] == "versions") return runVersions(args[1..$]);
+    else if (args[1] == "list") return runList(args[1..$]);
     else
     {
-        WARN("Unknown command specified, please use one of - [bench, versions]");
+        WARN("Unknown command specified, please use one of - [bench, list, versions]");
         return 1;
     }
 }
@@ -129,6 +130,63 @@ int runVersions(string[] args)
     return 0;
 }
 
+int runList(string[] args)
+{
+    BenchmarkType benchType = BenchmarkType.all;
+    auto opts = args.getopt(
+        "type", "Type of benchmarks to list - one of all, singleCore, multiCore (default: all)", &benchType,
+    );
+
+    if (opts.helpWanted)
+    {
+        defaultGetoptPrinter(
+            "Lists available HTTP benchmarks.\n"
+            ~ "Usage: runner.d list [opts]\n",
+            opts.options);
+        return 0;
+    }
+
+    auto benchmarks = loadBenchmarks().filter!(a => (a.benchType & benchType)).array;
+
+    bool first;
+    foreach (grp; benchmarks.chunkBy!(a => a.benchType))
+    {
+        auto gbs = grp[1].array.sort!((a,b)
+        {
+            if (a.language < b.language) return true;
+            if (a.language == b.language)
+            {
+                if (a.framework < b.framework) return true;
+                if (a.framework == b.framework) return a.name < b.name;
+            }
+            return false;
+        });
+
+        if (first) first = false;
+        else writeln();
+
+        writeln("# ", grp[0], "\n");
+        size_t maxLang, maxFW, maxName;
+        foreach (b; gbs)
+        {
+            maxLang = max(b.language.length, maxLang, "Language".length);
+            maxFW = max(b.framework.length, maxFW, "Framework".length);
+            maxName = max(b.name.length, maxName, "Name".length);
+        }
+        writeln(
+            "| ",
+            ["Language".padRight(maxLang), "Framework".padRight(maxFW), "Name".padRight(maxName)].joiner(" | "),
+            " |");
+        writeln("| ", [pad!'-'(maxLang), pad!'-'(maxFW), pad!'-'(maxName)].joiner(" | "), " |");
+
+        foreach(b; gbs) writeln(
+            "| ",
+            [b.language.padRight(maxLang), b.framework.padRight(maxFW), b.name.padRight(maxName)].joiner(" | "),
+            " |");
+    }
+
+    return 0;
+}
 
 string testURL;
 string remoteHost;
@@ -139,7 +197,7 @@ string testPath;
 
 int runBench(string[] args)
 {
-    BenchmarkType benchType;
+    BenchmarkType benchType = BenchmarkType.all;
     bool verbose, vverbose, quiet;
     string host;
 
@@ -171,7 +229,7 @@ int runBench(string[] args)
     {
         defaultGetoptPrinter(
             "Runs HTTP benchmarks.\n"
-            ~ "Usage: runner.d [opts] [name1 name2 ...]\n"
+            ~ "Usage: runner.d bench [opts] [name1 name2 ...]\n"
             ~ "By default it runs all benchmarks of all types. Additional partial names can be added to filter benchmarks.\n",
             opts.options);
         return 0;
@@ -215,7 +273,40 @@ int runBench(string[] args)
 
     DIAG("Test url: ", testURL);
 
+    auto benchmarks = loadBenchmarks().filter!(a => (a.benchType & benchType)).array;
+
+    if (args.length > 1)
+    {
+        benchmarks = benchmarks.filter!(a => args[1..$].canFind!((a,b) => b.canFind(a))(a.id)).array;
+    }
+
+    // run benchmarks
+    foreach (ref b; benchmarks) b.run();
+
+    INFO("Benchmarks has been completed");
+
+    // sort results by median
+    benchmarks.sort!((a,b)
+    {
+        if (a.benchType < b.benchType) return true;
+        if (a.benchType == b.benchType)
+        {
+            if (a.err || b.err) return false;
+            //return a.med < b.med;
+            return a.rps > b.rps;
+        }
+        return false;
+    });
+
+    benchmarks.genTable();
+
+    return 0;
+}
+
+auto loadBenchmarks()
+{
     string rootDir = getcwd();
+
     // build benchmarks list
     auto benchmarks = rootDir.dirEntries("meta.json", SpanMode.depth).filter!(a => a.isFile)
         .map!((m)
@@ -255,7 +346,6 @@ int runBench(string[] args)
                 });
         })
         .joiner
-        .filter!(a => (a.benchType & benchType))
         .array;
 
     benchmarks.sort!((a,b)
@@ -265,36 +355,11 @@ int runBench(string[] args)
         return false;
     });
 
-    if (args.length > 1)
-    {
-        benchmarks = benchmarks.filter!(a => args[1..$].canFind!((a,b) => b.canFind(a))(a.id)).array;
-    }
-
-    // run benchmarks
-    foreach (ref b; benchmarks) b.run();
-
-    INFO("Benchmarks has been completed");
-
-    // sort results by median
-    benchmarks.sort!((a,b)
-    {
-        if (a.benchType < b.benchType) return true;
-        if (a.benchType == b.benchType)
-        {
-            if (a.err || b.err) return false;
-            //return a.med < b.med;
-            return a.rps > b.rps;
-        }
-        return false;
-    });
-
-    benchmarks.genTable();
-
-    return 0;
+    return benchmarks;
 }
 
 // workaround for #20765 (fixed in dmd-2.094.0)
-static string fixLocal(string cmd, string workDir)
+string fixLocal(string cmd, string workDir)
 {
     if (cmd.startsWith("./")) return buildPath(workDir, cmd);
     return cmd;
