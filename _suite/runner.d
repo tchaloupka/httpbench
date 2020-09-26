@@ -194,6 +194,8 @@ int numReq = 64_000;        // number of requests to test
 int numClients = 64;        // number of workers to test with concurrently
 int reqTimeout = 10;        // number of seconds for request timeout
 string testPath;
+int bestOfNum = 1;
+bool keepalive = true;
 
 int runBench(string[] args)
 {
@@ -222,7 +224,9 @@ int runBench(string[] args)
             "Number of workers to run concurrently. "
             ~ "Total number of requests cannot be smaller than the concurrency level. Default is 50.",
             &numClients,
-        "t", "Timeout for each request in seconds. Default is 10, use 0 for infinite.", &reqTimeout
+        "t", "Timeout for each request in seconds. Default is 10, use 0 for infinite.", &reqTimeout,
+        "bestof|b", "Runs each test multiple times and outputs just the best one. Default is 1.", &bestOfNum,
+        "keepalive", "Should workload generator use same connection for multiple requests? Default true.", &keepalive
     );
 
     if (opts.helpWanted)
@@ -384,7 +388,7 @@ void genTable(Benchmark[] benchmarks)
             maxName = max(maxName, b.name.length, "Name".length);
             maxErr = max(maxErr, b.err.length);
             maxRes = max(maxRes, b.res.length.to!string.length, "Res[B]".length);
-            maxRequests = max(maxRequests, b.total.to!string.length, "Req".length);
+            maxRequests = max(maxRequests, b.stats.total.to!string.length, "Req".length);
             maxErrors = max(maxErrors, b.errors.to!string.length, "Err".length);
             maxRPS = max(maxRPS, b.rps.to!string.length, "RPS".length);
             maxBPS = max(maxBPS, b.bps.to!string.length, "BPS".length);
@@ -452,7 +456,7 @@ void genTable(Benchmark[] benchmarks)
                         b.category.to!string.pad(maxCat),
                         b.name.pad(maxName),
                         b.res.length.to!string.padLeft(maxRes),
-                        b.total.to!string.padLeft(maxRequests),
+                        b.stats.total.to!string.padLeft(maxRequests),
                         b.errors.to!string.padLeft(maxErrors),
                         b.rps.to!string.padLeft(maxRPS),
                         b.bps.to!string.padLeft(maxBPS),
@@ -609,25 +613,42 @@ void warmup(ref Benchmark bench)
 // Collect benchmark request times
 void test(ref Benchmark bench)
 {
-    DIAG("Testing ", bench.id);
-    auto ret = runHey(numReq, numClients, reqTimeout, "csv");
-    enforce(ret.status == 0, "Test failed: " ~ ret.output);
-
-    bench.times = ret.output.lineSplitter.drop(1)
-        .tee!(a => bench.total++)
-        .map!((line)
+    Results res;
+    foreach (i; 0..bestOfNum)
+    {
+        DIAG("Testing ", bench.id, " - run ", i+1, " of ", bestOfNum);
+        try
         {
-            auto cols = line.splitter(',');
-            auto time = cols.front.to!double * 1_000;
-            cols = cols.drop(6);
-            auto status = cols.front.to!int;
-            cols.popFront;
-            bench.time = cols.front.to!double;
-            return tuple(time, status);
-        })
-        .filter!(a => a[1] == 200)
-        .map!(a => a[0]).array;
-    bench.times.sort();
+            auto ret = runHey(numReq, numClients, reqTimeout, "csv");
+            enforce(ret.status == 0, "Test failed: " ~ ret.output);
+
+            Results tmp;
+            tmp.times = ret.output.lineSplitter.drop(1)
+                .tee!(a => tmp.total++)
+                .map!((line)
+                {
+                    auto cols = line.splitter(',');
+                    auto time = cols.front.to!double * 1_000;
+                    cols = cols.drop(6);
+                    auto status = cols.front.to!int;
+                    cols.popFront;
+                    tmp.time = cols.front.to!double;
+                    return tuple(time, status);
+                })
+                .filter!(a => a[1] == 200)
+                .map!(a => a[0]).array;
+            DIAG("RPS: ", tmp.total / tmp.time);
+
+            if (!res.times || (res.total / res.time) < (tmp.total / tmp.time))
+                res = tmp;
+        }
+        catch (Exception ex)
+        {
+            if (!res.times && i+1 == bestOfNum) throw ex;
+        }
+    }
+    res.times.sort();
+    bench.stats = res;
 }
 
 auto runHey(int requests, int clients, int timeout, string fmt = null)
@@ -637,10 +658,11 @@ auto runHey(int requests, int clients, int timeout, string fmt = null)
         "-n", requests.to!string,
         "-c", clients.to!string,
         "-t", timeout.to!string,
-        // "-disable-keepalive", // bad impact
     ];
+    if (!keepalive) args ~= "-disable-keepalive";
     if (fmt) args ~= ["-o", fmt];
     args ~= testURL;
+
     if (remoteHost) args = ["ssh", remoteHost, args.joiner(" ").text];
     return execute(args);
 }
@@ -718,6 +740,13 @@ enum Category
     fullStack
 }
 
+struct Results
+{
+    size_t total;   // total requests made
+    double time;    // total time taken [s]
+    double[] times; // request times [ms]
+}
+
 struct Benchmark
 {
     // metadata
@@ -735,10 +764,8 @@ struct Benchmark
 
     // results
     string err;     // set on error
-    size_t total;   // total requests made
-    double time;    // total time taken [s]
-    double[] times; // request times [ms]
     string res;     // sample response
+    Results stats;  // result statistics
 
     string id() const
     {
@@ -746,15 +773,15 @@ struct Benchmark
         return format!"%s/%s"(language, framework);
     }
 
-    double med() const { return times ? times[$/2] : 0; }
-    double min() const { return times ? times[0] : 0; }
-    double max() const { return times ? times[$-1] : 0; }
-    size_t rps() const { return times ? cast(size_t)(total / time) : 0; }
-    double under25() const { return times ? times[$/4] : 0; }
-    double under75() const { return times ? times[3*$/4] : 0; }
-    double under99() const { return times ? times[cast(size_t)(ceil($ * 0.99))-1] : 0; }
-    size_t bps() const { return times ? cast(size_t)(total * res.length / time) : 0; }
-    size_t errors() const { return total - times.length; }
+    double med() const { return stats.times ? stats.times[$/2] : 0; }
+    double min() const { return stats.times ? stats.times[0] : 0; }
+    double max() const { return stats.times ? stats.times[$-1] : 0; }
+    size_t rps() const { return stats.times ? cast(size_t)(stats.total / stats.time) : 0; }
+    double under25() const { return stats.times ? stats.times[$/4] : 0; }
+    double under75() const { return stats.times ? stats.times[3*$/4] : 0; }
+    double under99() const { return stats.times ? stats.times[cast(size_t)(ceil($ * 0.99))-1] : 0; }
+    size_t bps() const { return stats.times ? cast(size_t)(stats.total * res.length / stats.time) : 0; }
+    size_t errors() const { return stats.total - stats.times.length; }
 }
 
 // simple logger
