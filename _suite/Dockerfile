@@ -26,23 +26,6 @@ ENV GOBIN="$HOME/bin"
 ENV CARGO_HOME="/opt/.cargo" PATH="/opt/.cargo/bin:${PATH}"
 RUN wget -O - https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
 
-# https://github.com/rakyll/hey
-# RUN wget --progress=dot:giga \
-#     https://storage.googleapis.com/hey-release/hey_linux_amd64 \
-#     && chmod +x hey_linux_amd64 \
-#     && ln -s /opt/hey_linux_amd64 /usr/bin/hey
-
-ARG HEY=0.1.4
-RUN wget --progress=dot:giga -O - \
-    https://github.com/rakyll/hey/archive/v$HEY.tar.gz \
-    | tar -xz \
-    && cd hey-$HEY \
-    && go build -o ./bin/hey_linux_amd64 \
-    && cd .. \
-    && mv /opt/hey-$HEY/bin/hey_linux_amd64 /usr/bin/hey \
-    && rm -rf hey-$HEY \
-    && rm -rf /root/go
-
 # .Net Core SDK
 ENV \
     # Unset ASPNETCORE_URLS from aspnet base image
@@ -69,6 +52,28 @@ RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$
 RUN apt update \
     && apt install -y nginx-light \
     && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# https://github.com/rakyll/hey
+# RUN wget --progress=dot:giga \
+#     https://storage.googleapis.com/hey-release/hey_linux_amd64 \
+#     && chmod +x hey_linux_amd64 \
+#     && ln -s /opt/hey_linux_amd64 /usr/bin/hey
+
+ARG HEY=0.1.4
+RUN wget --progress=dot:giga -O - \
+    https://github.com/rakyll/hey/archive/v$HEY.tar.gz \
+    | tar -xz \
+    && cd hey-$HEY \
+    && go build -o ./bin/hey_linux_amd64 \
+    && cd .. \
+    && mv /opt/hey-$HEY/bin/hey_linux_amd64 /usr/bin/hey \
+    && rm -rf hey-$HEY \
+    && rm -rf /root/go
+
+# https://github.com/wg/wrk
+RUN git clone https://github.com/wg/wrk.git \
+    && cd wrk && make && mv wrk /usr/local/bin/wrk \
+    && cd .. && rm -rf wrk
 
 RUN go version && echo "---" \
     && ldc2 --version && echo "---" \

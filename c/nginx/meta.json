@@ -1,10 +1,12 @@
 [
     {
         "type": "singleCore",
+        "category": "platform",
         "runCmd": ["./run.sh", "1"]
     },
     {
         "type": "multiCore",
+        "category": "platform",
         "runCmd": ["./run.sh", "auto"]
     }
 ]
