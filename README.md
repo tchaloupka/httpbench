@@ -103,6 +103,8 @@ I've wanted to add this popular library in the mix just for comparison. Currentl
 
 They are added to a `singeCore` type tests as they don't use (at the moment) some eventloop so we can compare this traditional way against the others in that category.
 
+See Adam's [description](http://dpldocs.info/this-week-in-d/Blog.Posted_2020_09_21.html#on-cgi.d-performance) for more.
+
 ##### [during](https://code.dlang.org/packages/during)
 
 * **raw** - test that tries to be as fast as possible to make a theoretical limit of the used system facility (so no parsers, routers, ... - just plain event loop)
