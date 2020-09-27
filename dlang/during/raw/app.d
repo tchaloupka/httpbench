@@ -143,8 +143,16 @@ extern(C) int main()
                 case OP.READ:
                     if (_expect(cqe.res <= 0, false))
                     {
-                        // debug printf("Client disconnect: fd=%d, res=%d\n", ctx.fd, cqe.res);
-                        shutdown(ctx.fd, SHUT_RDWR);
+                        debug printf("Client disconnect: fd=%d, res=%d, flags=%d\n", ctx.fd, cqe.res, cqe.flags);
+                        close(ctx.fd);
+                        if (cqe.flags & CQEFlags.BUFFER)
+                        {
+                            // return buffer too
+                            immutable bid = cast(ushort)(cqe.flags >> 16);
+                            io.next
+                                .prepProvideBuffer(bufs[bid], group_id, bid)
+                                .setUserDataRaw(OperationCtx(0, OP.PROV_BUF));
+                        }
                         break;
                     }
 
@@ -172,7 +180,7 @@ extern(C) int main()
                     if (_expect(cqe.res <= 0, false))
                     {
                         debug printf("Client error: fd=%d, res=%d\n", ctx.fd, cqe.res);
-                        shutdown(ctx.fd, SHUT_RDWR);
+                        close(ctx.fd);
                         break;
                     }
                     assert(cqe.res == response.length, "FIXME: Incomplete write");

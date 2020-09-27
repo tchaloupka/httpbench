@@ -161,6 +161,11 @@ int main(int argc, char *argv[]) {
                 if (cqe->res <= 0) {
                     // connection closed or error
                     close(conn_i.fd);
+                    if (cqe->flags & IORING_CQE_F_BUFFER) {
+                        // give the buffer back
+                        int bid = cqe->flags >> 16;
+                        add_provide_buf(&ring, bid, group_id);
+                    }
                 } else {
                     // check for complete request
                     int bid = cqe->flags >> 16;
