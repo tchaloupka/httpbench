@@ -65,10 +65,16 @@ RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$
     && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
     && dotnet help
 
+# Nginx
+RUN apt update \
+    && apt install -y nginx-light \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
 RUN go version && echo "---" \
     && ldc2 --version && echo "---" \
     && rustc --version && echo "---" \
     && dotnet --version && echo "---" \
+    && nginx -v && echo "---" \
     echo " END"
 
 WORKDIR /src

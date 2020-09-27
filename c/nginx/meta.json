@@ -1,0 +1,10 @@
+[
+    {
+        "type": "singleCore",
+        "runCmd": ["./run.sh", "1"]
+    },
+    {
+        "type": "multiCore",
+        "runCmd": ["./run.sh", "auto"]
+    }
+]
