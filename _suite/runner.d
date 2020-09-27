@@ -292,6 +292,7 @@ int runBench(string[] args)
         enforce(ret.status == 0, "Error determinig host number of CPUs: " ~ ret.output);
         threads = ret.output.stripRight.to!uint;
         if ((benchType & BenchmarkType.singleCore) && !remoteHost) threads--; // leave some for singleCore test process
+		if (numClients < threads) threads = numClients;
     }
 
     DIAG("Test url: ", testURL);
@@ -764,6 +765,7 @@ double toMsecs(double time, string tm)
         case "us": return time / 1_000;
         case "ms": return time;
         case "s": return time * 1_000;
+        case "m": return time * 60_000;
         default:
             WARN("Unhandled time spec: ", tm);
             return 0;
