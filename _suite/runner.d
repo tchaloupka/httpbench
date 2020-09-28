@@ -399,8 +399,7 @@ void genTable(Benchmark[] benchmarks)
         // determine column sizes for even spaces in output
         size_t maxLang, maxCat, maxFW, maxName, maxErr, maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax,
             max25, max75, max90, max99, maxVals;
-        bool hasErrors;
-
+        bool hasErrors, hasDiffRes;
         foreach (ref b; recs)
         {
             maxLang = max(maxLang, b.language.length, "Language".length);
@@ -422,6 +421,8 @@ void genTable(Benchmark[] benchmarks)
             max90 = max(max90, b.stats.under90.to!string.length, "90%".length);
             max99 = max(max99, b.stats.under99.to!string.length, "99%".length);
         }
+
+        hasDiffRes = recs.map!(a => a.res.length).array.sort().uniq.walkLength > 1;
 
         if (maxErr)
         {
@@ -445,6 +446,7 @@ void genTable(Benchmark[] benchmarks)
         string[] cols = [
             "Language".pad(maxLang), "Framework".pad(maxFW), "Category".pad(maxCat), "Name".pad(maxName),
             "Res[B]".pad(maxRes), "Req".pad(maxRequests)];
+        if (!hasDiffRes) cols = cols.remove(4);
         if (hasErrors) cols ~= "Err".pad(maxErrors);
         cols ~= ["RPS".pad(maxRPS), "BPS".pad(maxBPS)];
         if (tool == Tool.hey)
@@ -457,6 +459,7 @@ void genTable(Benchmark[] benchmarks)
             ];
         writeln("| ", cols.joiner(" | "), " |");
         auto pads = [maxRes, maxRequests, maxErrors, maxRPS, maxBPS];
+        if (!hasDiffRes) pads = pads.remove(0);
         if (!hasErrors) pads = pads.remove(2);
         writeln(
             "|:",
@@ -500,6 +503,7 @@ void genTable(Benchmark[] benchmarks)
                     b.bps.to!string.padLeft(maxBPS)
                 ];
                 if (!hasErrors) cols = cols.remove(6);
+                if (!hasDiffRes) cols = cols.remove(4);
                 writeln(
                     "| ", cols.joiner(" | "),
                     " | ",
