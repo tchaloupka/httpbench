@@ -16,7 +16,7 @@ void main(string[] args)
     if (args.length > 1) builder.ioThreadSize(args[1].to!int);
     builder.addRoute("/", ((RoutingContext context) {
         context.responseHeader(HttpHeader.CONTENT_TYPE, MimeType.TEXT_PLAIN_VALUE);
-        context.responseHeader("X-Test", "0123456789012345678901234567890123456789012");
+        context.responseHeader("X-Test", "0123456789012345678901234567890123456789012012345678901234567890123456789");
         context.end("Hello, World!");
     }));
 

@@ -27,6 +27,7 @@ extern(C) void main()
                 "HTTP/1.1 200 OK\r\n"
                 ~ "Server: epoll/raw_0123456789012345678901234567890123456789\r\n"
                 ~ "Connection: keep-alive\r\n"
+                ~ "X-Test: 01234567890123456789\r\n"
                 ~ "Content-Type: text/plain\r\n"
                 ~ "Content-Length: 13\r\n"
                 ~ "\r\n"

@@ -19,7 +19,7 @@ final class Router
     // GET /
     @Get("") get(ServerResponse response) {
         response.headers["Content-Type"] = "text/plain; charset=utf-8";
-        response.headers["X-Test"] = "0123456789012345678901234567890123456789";
+        response.headers["X-Test"] = "0123456789012345678901234567890123456789012345678901234567890123456789";
         response.body = "Hello, World!";
     }
 }

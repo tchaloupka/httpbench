@@ -24,6 +24,6 @@ func main() {
 }
 
 func Plaintext(ctx *fasthttp.RequestCtx) {
-    ctx.Response.Header.Set("X-Test", "0123456789")
+    ctx.Response.Header.Set("X-Test", "0123456789012345678901234567890123456789")
     ctx.Response.SetBodyString("Hello, World!")
 }

@@ -28,7 +28,7 @@ void main()
                 }
                 conn.write(cast(const(ubyte)[])(
                       "HTTP/1.1 200 OK\r\n"
-                    ~ "Server: vibe-core_0123456789012345678901234567890123456789\r\n"
+                    ~ "Server: vibe-core_0123456789012345678901234567890123456789012345678900123456789001234567\r\n"
                     ~ "Content-Length: 13\r\n"
                     ~ "Content-Type: text/plain\r\n"
                     ~ "Connection: keep-alive\r\n"

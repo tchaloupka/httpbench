@@ -76,6 +76,7 @@ struct ClientHandler {
             auto reply = cast(const(ubyte)[])(
                       "HTTP/1.1 200 OK\r\n"
                     ~ "Server: eventcore_0123456789012345678901234567890123456789\r\n"
+                    ~ "X-Test: 01234567890123456789\r\n"
                     ~ "Content-Length: 13\r\n"
                     ~ "Content-Type: text/plain\r\n"
                     ~ "Connection: keep-alive\r\n"

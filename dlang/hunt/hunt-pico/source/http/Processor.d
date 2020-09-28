@@ -90,7 +90,7 @@ struct HttpRequest {
 enum string ResponseData = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: Keep-Alive\r\nContent-Type: text/plain\r\nServer: Hunt/1.0\r\nDate: Wed, 17 Apr 2013 12:00:00 GMT\r\n\r\nHello, World!";
 //}
 
-enum string keepAliveResponseData = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: Keep-Alive\r\nContent-Type: text/plain\r\nServer: Hunt/1.0_____\r\nDate: Wed, 17 Apr 2013 12:00:00 GMT\r\n\r\nHello, World!";
+enum string keepAliveResponseData = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nX-Test: 12345678901234567890\r\nConnection: Keep-Alive\r\nContent-Type: text/plain\r\nServer: Hunt/1.0_____\r\nDate: Wed, 17 Apr 2013 12:00:00 GMT\r\n\r\nHello, World!";
 enum string nokeepAliveResponseData = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\nContent-Type: text/plain\r\nServer: Hunt/1.0_____\r\nDate: Wed, 17 Apr 2013 12:00:00 GMT\r\n\r\nHello, World!";
 
 enum string keepAliveJsonDate = "HTTP/1.1 200 OK\r\nContent-Length: 27\r\nConnection: Keep-Alive\r\nContent-Type: application/json; charset=UTF-8\r\nServer: Hunt/1.0\r\nDate: Wed, 17 Apr 2013 12:00:00 GMT\r\n\r\n{\"message\":\"Hello, World!\"}";

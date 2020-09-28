@@ -27,7 +27,7 @@ namespace PlatformBenchmarks
         private readonly static AsciiString _headerContentTypeJson = "Content-Type: application/json";
         private readonly static AsciiString _headerContentTypeHtml = "Content-Type: text/html; charset=UTF-8";
 
-        private readonly static AsciiString _padHeader = "X-Test: 01234567890123456789012345";
+        private readonly static AsciiString _padHeader = "X-Test: 01234567890123456789012345012345678901234567890123456789";
 
         private readonly static AsciiString _plainTextBody = "Hello, World!";
 

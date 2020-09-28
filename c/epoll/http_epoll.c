@@ -27,6 +27,7 @@ struct Client {
 const char response[] =
     "HTTP/1.1 200 OK\r\n"
     "Server: epoll/raw_0123456789012345678901234567890123456789\r\n"
+    "X-Test: 01234567890123456789\r\n"
     "Connection: keep-alive\r\n"
     "Content-Type: text/plain\r\n"
     "Content-Length: 13\r\n"
@@ -167,7 +168,7 @@ int main(int argc, char *argv[])
                     closeClient(epollfd, clientfd);
                     continue;
                 }
-                if (__builtin_expect(bytes != 162, 0)) {
+                if (__builtin_expect(bytes != sizeof(response) - 1, 0)) {
                     fprintf(stderr, "FIXME: Whole response not sent\n");
                     exit(1);
                 }

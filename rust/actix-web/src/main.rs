@@ -12,7 +12,7 @@ async fn main() -> std::io::Result<()> {
                 HttpResponse::Ok()
                     .content_type("text/plain")
                     .header("Server", "rust/actix-web")
-                    .header("X-Test", "0123456789012")
+                    .header("X-Test", "0123456789012345678901234567890123456789012")
                     .body("Hello, World!")
             }))
     })

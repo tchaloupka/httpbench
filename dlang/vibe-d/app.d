@@ -44,5 +44,6 @@ void runServer()
 
 void handleRequest(scope HTTPServerRequest req, scope HTTPServerResponse res)
 {
+    res.headers["X-Test"] = "01234567890123456789";
     res.writeBody("Hello, World!", "text/plain");
 }

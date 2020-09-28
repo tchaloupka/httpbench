@@ -42,6 +42,7 @@ int group_id = 1337;
 const char response[] =
     "HTTP/1.1 200 OK\r\n"
     "Server: io_uring/raw_0123456789012345678901234567890123456\r\n"
+    "X-Test: 01234567890123456789\r\n"
     "Connection: keep-alive\r\n"
     "Content-Type: text/plain\r\n"
     "Content-Length: 13\r\n"

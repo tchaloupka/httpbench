@@ -15,7 +15,7 @@ use actix_service::fn_service;
 use bytes::{Buf, BufMut, BytesMut};
 use tokio_util::codec::{Decoder};
 
-const PLAIN: &[u8] = b"HTTP/1.1 200 OK\r\nServer: Actix RAW_012345678901234567890123456\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n";
+const PLAIN: &[u8] = b"HTTP/1.1 200 OK\r\nServer: Actix RAW_012345678901234567890123456789012345678901234567890123456\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n";
 const HTTPNFOUND: &[u8] = b"HTTP/1.1 404 Not Found\r\n";
 const HDR_SERVER: &[u8] = b"Server: A\r\n";
 const BODY: &[u8] = b"Hello, World!";
