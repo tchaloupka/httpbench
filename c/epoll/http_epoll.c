@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/epoll.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 
 #define BACKLOG 512
@@ -54,7 +55,11 @@ int main(int argc, char *argv[])
         error("Error creating socket..\n");
     }
     const int val = 1;
-    setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
+    if (setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)) == -1
+        || setsockopt(sock_listen_fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1) {
+        perror("setsockopt()");
+        exit(1);
+    }
 
     memset((char *)&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
