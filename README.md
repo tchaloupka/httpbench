@@ -8,12 +8,12 @@ Tests were gathered or modified from various places (including [TechEmpower](htt
 
 It uses [docker](https://www.docker.com) container to build and host services on and can run locally or use load tester from remote host.
 
-[hey](https://github.com/rakyll/hey) is used as a load generator and requests statistics collector.
+[wrk](https://github.com/wg/wrk) is used as a default load generator and requests statistics collector, but [hey](https://github.com/rakyll/hey) is supported too (just use `--tool` switch).
 
-Tests can be run without docker too, one just needs to have installed tested language compilers and [hey](https://github.com/rakyll/hey) workload generator (but this has been tested on linux only).
+Tests can be run without docker too, one just needs to have installed tested language compilers and [wrk](https://github.com/wg/wrk)/[hey](https://github.com/rakyll/hey) workload generator (but this has been tested on linux only).
 
-For `io_uring` tests to work one currently has to run the tests on at least Linux kernel 5.7.
-Problems with user limits on locked memory (`ulimit -l`) are the possible too when run with regular user.
+**Note for io_uring tests:** - At least Linux kernel 5.7 is needed for tests to work.
+Problems with user limits on locked memory (`ulimit -l`) are possible too when run with regular user.
 
 ## Tests
 
