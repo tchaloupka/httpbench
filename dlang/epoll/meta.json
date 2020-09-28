@@ -1,6 +1,15 @@
 [
     {
-        "name": "raw",
+        "name": "raw - edge",
+        "type": "singleCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": "--betterC --d-version=EdgeTriggered"
+        },
+        "runCmd": ["./app"]
+    },
+    {
+        "name": "raw - lvl",
         "type": "singleCore",
         "buildCmd": ["dub", "build", "--single", "app.d"],
         "buildEnv": {

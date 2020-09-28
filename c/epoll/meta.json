@@ -1,8 +1,14 @@
 [
     {
-        "name": "raw",
+        "name": "raw - edge",
         "type": "singleCore",
-        "buildCmd": ["make", "all"],
+        "buildCmd": ["make", "edge"],
+        "runCmd": ["./http_epoll", "8080"]
+    },
+    {
+        "name": "raw - lvl",
+        "type": "singleCore",
+        "buildCmd": ["make", "level"],
         "runCmd": ["./http_epoll", "8080"]
     }
 ]

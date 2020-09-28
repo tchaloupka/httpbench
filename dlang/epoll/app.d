@@ -90,7 +90,8 @@ extern(C) void main()
                 if (_expect(cfd == -1, false)) error!"Error accepting new connection..";
                 clients[cfd].len = 0;
 
-                ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+                version (EdgeTriggered) ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+                else ev.events = EPOLLIN | EPOLLRDHUP;
                 ev.data.fd = cfd;
                 if (_expect(epoll_ctl(epollfd, EPOLL_CTL_ADD, cfd, &ev) == -1, false))
                     error!"Error adding new event to epoll..";
@@ -109,12 +110,12 @@ extern(C) void main()
             immutable bytes = recv(fd, &clients[fd].buffer[clients[fd].len], MAX_MESSAGE_LEN - clients[fd].len, 0);
             if (bytes <= 0)
             {
-                if (errno == EWOULDBLOCK) goto parse;
+                version (EdgeTriggered) { if (errno == EWOULDBLOCK) goto parse; }
                 closeClient(epollfd, fd, errno);
                 continue;
             }
             clients[fd].len += bytes;
-            goto read;
+            version (EdgeTriggered) goto read;
 
             parse:
             // parse request

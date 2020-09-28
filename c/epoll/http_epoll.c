@@ -99,7 +99,11 @@ int main(int argc, char *argv[])
                     error("Error accepting new connection..\n");
                 }
 
-                ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+                #ifdef EDGE
+                    ev.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+                #else
+                    ev.events = EPOLLIN | EPOLLRDHUP;
+                #endif
                 ev.data.fd = sock_conn_fd;
                 if (__builtin_expect(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock_conn_fd, &ev) == -1, 0)) {
                     error("Error adding new event to epoll..\n");
@@ -127,7 +131,9 @@ int main(int argc, char *argv[])
                 );
 
                 if (bytes <= 0) {
-                    if (__builtin_expect(errno == EAGAIN, 1)) goto parse;
+                    #ifdef EDGE
+                        if (__builtin_expect(errno == EAGAIN, 1)) goto parse;
+                    #endif
                     closeClient(epollfd, clientfd);
                     continue;
                 }
@@ -135,7 +141,9 @@ int main(int argc, char *argv[])
                 #ifdef DEBUG
                 printf("client read: fd=%d, bytes=%d, inbuf=%d\n", clientfd, bytes, clients[clientfd].len);
                 #endif
-                goto read;
+                #ifdef EDGE
+                    goto read;
+                #endif
 
                 parse:
                 // Check if http request is complete.
