@@ -188,11 +188,12 @@ Column description:
 * Err - number of responses with other than 200 OK results
 * RPS - requests per second
 * BPS - bytes per second
-* med - median request time in [ms]
 * min - minimal request time in [ms]
 * max - maximal request time in [ms]
 * 25% - 25% of requests has been completed within this time in [ms]
+* 50% - 50% of requests has been completed within this time in [ms] (median)
 * 75% - 75% of requests has been completed within this time in [ms]
+* 90% - 90% of requests has been completed within this time in [ms]
 * 99% - 99% of requests has been completed within this time in [ms]
 
 #### Single core results

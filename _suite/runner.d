@@ -198,7 +198,7 @@ int reqTimeout = 10;        // number of seconds for request timeout
 string testPath;
 int bestOfNum = 1;
 bool keepalive = true;
-Tool tool;
+Tool tool = Tool.wrk;
 uint duration = 10;
 uint threads;
 
@@ -232,7 +232,7 @@ int runBench(string[] args)
         "t", "Timeout for each request in seconds. Default is 10, use 0 for infinite.", &reqTimeout,
         "bestof|b", "Runs each test multiple times and outputs just the best one. Default is 1.", &bestOfNum,
         "keepalive", "Should workload generator use same connection for multiple requests? Default true.", &keepalive,
-        "tool", "Tool to use as a load generator. One of hey, wrk. Default is hey.", &tool,
+        "tool", "Tool to use as a load generator. One of hey, wrk. Default is wrk.", &tool,
         "duration|d", "Duration of the individual test in seconds to use with wrk tool. Default is 10s.", &duration,
         "threads", "Total number of threads to use with wrk tool. Default is host number of CPUs.", &threads
     );
