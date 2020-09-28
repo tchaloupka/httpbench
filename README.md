@@ -96,10 +96,11 @@ Epoll and io_uring are added. Both named as `raw`.
 
 ##### [arsd-official](https://code.dlang.org/packages/arsd-official)
 
-I've wanted to add this popular library in the mix just for comparison. Currently two configurations of internal http servers are used:
+I've wanted to add this popular library in the mix just for comparison. Currently three configurations of internal http servers are used:
 
 * process - forked process, each serving one request
 * threads - threadpool to handle connected clients
+* hybrid - an experimental Linux-only hybrid implementation of forked processes, worker threads, and fibers in an event loop
 
 They are added to a `singeCore` type tests as they don't use (at the moment) some eventloop so we can compare this traditional way against the others in that category.
 
