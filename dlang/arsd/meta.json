@@ -12,5 +12,13 @@
         "category": "platform",
         "buildCmd": ["dub", "build", "-c", "processes"],
         "runCmd": ["./app", "--port", "8080"]
+    },
+    {
+        "name": "hybrid",
+        "type": "singleCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "-c", "hybrid"],
+        "runCmd": ["./app", "--port", "8080"]
     }
+
 ]

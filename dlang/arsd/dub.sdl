@@ -1,6 +1,6 @@
 name "app"
 targetType "executable"
-dependency "arsd-official:cgi" version=">=8.4.4"
+dependency "arsd-official:cgi" version="~master"
 
 configuration "threads" {
     // the threads version works better on benchmarks due to various tradeoffs
@@ -9,4 +9,8 @@ configuration "threads" {
 
 configuration "processes" {
     subConfiguration "arsd-official:cgi" "embedded_httpd_processes"
+}
+
+configuration "hybrid" {
+    subConfiguration "arsd-official:cgi" "embedded_httpd_hybrid"
 }
