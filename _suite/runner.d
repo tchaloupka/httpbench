@@ -41,19 +41,55 @@ shared static this()
 
 LogLevel minLogLevel = LogLevel.info;
 
+struct Cmd
+{
+    string name;
+    string desc;
+    int function(string[] args) handler;
+}
+
+immutable Cmd[] commands = [
+    Cmd("bench", "Evaluetes performance of the selected tests", &runBench),
+    Cmd("list", "List available tests", &runList),
+    Cmd("responses", "Run tests binary to sample their HTTP response", &runResponses),
+    Cmd("versions", "Prints used compilers versions", &runVersions)
+];
+
+void printGlobalDescription()
+{
+    writeln("runner.d is an entry point to control this benchmark suite.");
+    writeln("Use one of it's subcommands:");
+    immutable maxLen = commands.map!(a => a.name.length).maxElement + 2;
+    foreach (c; commands) writeln(c.name.pad(maxLen), " - ", c.desc);
+}
+
 int main(string[] args)
 {
     if (args.length < 2)
     {
-        WARN("No command specified, please use one of - [bench, list, versions]");
+        WARN("No command specified");
+        printGlobalDescription();
         return 1;
     }
-    if (args[1] == "bench") return runBench(args[1..$]);
-    else if (args[1] == "versions") return runVersions(args[1..$]);
-    else if (args[1] == "list") return runList(args[1..$]);
-    else
+
+    if (args.length == 2 && args[1].among("-h", "--help"))
     {
-        WARN("Unknown command specified, please use one of - [bench, list, versions]");
+        printGlobalDescription();
+        return 0;
+    }
+
+    immutable cmd = commands.countUntil!((a,b) => a.name == b)(args[1]);
+    if (cmd < 0)
+    {
+        WARN("Unknown command specified");
+        printGlobalDescription();
+        return 1;
+    }
+
+    try return commands[cmd].handler(args[1..$]);
+    catch (Exception ex)
+    {
+        ERROR("Error executing command ", commands[cmd].name, ": ", ex.msg);
         return 1;
     }
 }
@@ -188,6 +224,74 @@ int runList(string[] args)
     return 0;
 }
 
+int runResponses(string[] args)
+{
+    bool verbose, vverbose, quiet;
+    auto opts = args.getopt(
+        "verbose|v", "Verbose output", &verbose,
+        "vverbose", "Most verbose output", &vverbose,
+        "quiet|q", "Output just the results", &quiet
+    );
+
+    if (opts.helpWanted)
+    {
+        defaultGetoptPrinter(
+            "Prints out sampled response from tests.\n"
+            ~ "Usage: runner.d responses [opts] [name1 name2 ...]\n"
+            ~ "By default it checks response of all tests. Additional partial names can be added to filter them.\n",
+            opts.options);
+        return 0;
+    }
+
+    if (verbose) minLogLevel = LogLevel.diag;
+    if (vverbose) minLogLevel = LogLevel.trace;
+    if (quiet)
+    {
+        enforce(!verbose && !vverbose, "Quiet and verbose used at the same time");
+        minLogLevel = LogLevel.none;
+    }
+
+    auto benchmarks = loadBenchmarks().array;
+    if (args.length > 1)
+        benchmarks = benchmarks.filter!(a => args[1..$].canFind!((a,b) => b.canFind(a))(a.id)).array;
+
+    // get responses
+    foreach (ref b; benchmarks)
+    {
+        try
+        {
+            b.build();
+            auto pid = b.start();
+            scope (exit) b.kill(pid);
+            b.waitResponse();
+        }
+        catch (Exception ex)
+        {
+            ERROR("Failed to determine response of ", b.id, ": ", ex.msg);
+            b.err = ex.msg.lineSplitter.front;
+        }
+    }
+
+    foreach (i, grp; benchmarks.chunkBy!(a => a.benchType).enumerate)
+    {
+        if (i > 0) writeln();
+        writeln("# ", grp[0]);
+        writeln();
+
+        foreach (j, b; grp[1].enumerate)
+        {
+            if (j > 0) writeln();
+            writeln("## ", b.id, " (", b.res.length, "B)");
+            writeln();
+            writeln("```");
+            writeln(b.err ? b.err : b.res);
+            writeln("```");
+        }
+    }
+
+    return 0;
+}
+
 // benchmark params
 enum Tool { hey, wrk }
 string testURL;
@@ -298,11 +402,8 @@ int runBench(string[] args)
     DIAG("Test url: ", testURL);
 
     auto benchmarks = loadBenchmarks().filter!(a => (a.benchType & benchType)).array;
-
     if (args.length > 1)
-    {
         benchmarks = benchmarks.filter!(a => args[1..$].canFind!((a,b) => b.canFind(a))(a.id)).array;
-    }
 
     // run benchmarks
     foreach (ref b; benchmarks) b.run();
@@ -577,6 +678,7 @@ void run(ref Benchmark bench)
         bench.build();
         auto pid = bench.start();
         scope (exit) bench.kill(pid);
+        bench.waitResponse();
         bench.warmup();
         bench.test();
     }
@@ -617,10 +719,9 @@ Pid start(in Benchmark bench)
     // return spawnProcess(bench.runCmd, stdin, stdout, stderr, bench.runEnv, Config.none, bench.workDir);
 }
 
-// Waits for server to be started and run measurement tool to warm it up
-void warmup(ref Benchmark bench)
+void waitResponse(ref Benchmark bench)
 {
-    DIAG("Warming up ", bench.id);
+    DIAG("Awaiting response from ", bench.id);
 
     // wait for service to start responding
     int retry = 5;
@@ -658,6 +759,12 @@ void warmup(ref Benchmark bench)
     http.perform();
     bench.res = res.data;
     TRACE(bench.id, " - sample response (", res.data.length, "B):\n-----\n", res.data, "\n-----");
+}
+
+// Waits for server to be started and run measurement tool to warm it up
+void warmup(ref Benchmark bench)
+{
+    DIAG("Warming up ", bench.id);
 
     // warmup with benchmark tool
     auto ret = tool == Tool.hey

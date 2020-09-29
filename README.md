@@ -43,9 +43,10 @@ make multi      # runs tests limited to multiple CPU cores usage
 
 Main entry point to more advanced tests is in `_suite/runner.d` which is a runnable CLI script.
 
-* `_suite/runner.d versions` - prints out used language versions in Markdown table format
 * `_suite/runner.d list` - list available benchmarks
 * `_suite/runner.d bench` - runs benchmarks
+* `_suite/runner.d responses` - prints out sampled response from each benchmark service
+* `_suite/runner.d versions` - prints out used language versions in Markdown table format
 
 Use `_suite/runner.d bench -h` to print out CLI interface help.
 
