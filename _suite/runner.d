@@ -459,8 +459,8 @@ void genTable(Benchmark[] benchmarks)
             ];
         writeln("| ", cols.joiner(" | "), " |");
         auto pads = [maxRes, maxRequests, maxErrors, maxRPS, maxBPS];
-        if (!hasDiffRes) pads = pads.remove(0);
         if (!hasErrors) pads = pads.remove(2);
+        if (!hasDiffRes) pads = pads.remove(0);
         writeln(
             "|:",
             [maxLang, maxFW, maxCat, maxName].map!(a => pad!'-'(a)).joiner(":|:"), ":| ",
