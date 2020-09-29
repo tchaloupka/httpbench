@@ -54,8 +54,10 @@ void server() {
     }
 }
 
-void main() {
-    startloop();
+void main(string[] args) {
+
+    if (args.length > 1) startloop(args[1].to!uint);
+    else startloop();
     spawn(() => server());
     runFibers();
 }

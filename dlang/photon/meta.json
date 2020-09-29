@@ -3,6 +3,12 @@
         "type": "singleCore",
         "preCmd": ["./fetch.sh"],
         "buildCmd": ["./build.sh"],
+        "runCmd": ["./app", "1"]
+    },
+    {
+        "type": "multiCore",
+        "preCmd": ["./fetch.sh"],
+        "buildCmd": ["./build.sh"],
         "runCmd": ["./app"]
     }
 ]

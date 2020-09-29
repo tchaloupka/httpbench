@@ -1,0 +1,97 @@
+diff --git a/src/photon/linux/core.d b/src/photon/linux/core.d
+index 834778c..293622e 100644
+--- a/src/photon/linux/core.d
++++ b/src/photon/linux/core.d
+@@ -395,10 +395,10 @@ void printStats()
+     write(2, msg.ptr, msg.length);
+ }
+
+-public void startloop()
++public void startloop(uint threads = 0)
+ {
+-    import core.cpuid;
+-    uint threads = threadsPerCPU;
++    import core.cpuid : threadsPerCPU;
++    if (!threads) threads = threadsPerCPU;
+
+     event_loop_fd = cast(int)epoll_create1(0).checked("ERROR: Failed to create event-loop!");
+     // use RT signals, disable default termination on signal received
+
+diff --git a/src/photon/linux/support.d b/src/photon/linux/support.d
+index 24c1f6e..6d492e9 100644
+--- a/src/photon/linux/support.d
++++ b/src/photon/linux/support.d
+@@ -9,6 +9,8 @@ import core.stdc.config;
+ import core.sys.posix.pthread;
+ import photon.linux.syscalls;
+
++public import core.sys.linux.sched;
++
+ enum int MSG_DONTWAIT = 0x40;
+ enum int SOCK_NONBLOCK = 0x800;
+
+@@ -47,64 +49,3 @@ void logf(string file = __FILE__, int line = __LINE__, T...)(string msg, T args)
+         }
+     }
+ }
+-
+-
+-extern (C):
+-@nogc:
+-nothrow:
+-
+-
+-private // helpers
+-{
+-
+-    /* Size definition for CPU sets.  */
+-    enum
+-    {
+-        __CPU_SETSIZE = 1024,
+-        __NCPUBITS  = 8 * cpu_mask.sizeof,
+-    }
+-
+-    /* Macros */
+-
+-    /* Basic access functions.  */
+-    size_t __CPUELT(size_t cpu) pure
+-    {
+-        return cpu / __NCPUBITS;
+-    }
+-    cpu_mask __CPUMASK(size_t cpu) pure
+-    {
+-        return 1UL << (cpu % __NCPUBITS);
+-    }
+-
+-    cpu_mask __CPU_SET_S(size_t cpu, size_t setsize, cpu_set_t* cpusetp) pure
+-    {
+-        if (cpu < 8 * setsize)
+-        {
+-            cpusetp.__bits[__CPUELT(cpu)] |= __CPUMASK(cpu);
+-            return __CPUMASK(cpu);
+-        }
+-
+-        return 0;
+-    }
+-}
+-
+-/// Type for array elements in 'cpu_set_t'.
+-alias c_ulong cpu_mask;
+-
+-/// Data structure to describe CPU mask.
+-struct cpu_set_t
+-{
+-    cpu_mask[__CPU_SETSIZE / __NCPUBITS] __bits;
+-}
+-
+-/// Access macros for 'cpu_set' (missing a lot of them)
+-
+-cpu_mask CPU_SET(size_t cpu, cpu_set_t* cpusetp) pure
+-{
+-     return __CPU_SET_S(cpu, cpu_set_t.sizeof, cpusetp);
+-}
+-
+-/* Functions */
+-int sched_setaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *mask);
+-int sched_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *mask);
+-
