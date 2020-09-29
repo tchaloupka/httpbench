@@ -20,7 +20,7 @@ final class HelloWorldProcessor : HttpProcessor {
             "Hello, World!", 200,
             [
                 HttpHeader("Content-Type", "text/plain; charset=utf-8"),
-                HttpHeader("X-Test: 012345678901234567890123456")
+                HttpHeader("X-Test", "01234567890123456789012345678")
             ]
         );
     }
