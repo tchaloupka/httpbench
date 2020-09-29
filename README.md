@@ -48,7 +48,7 @@ Main entry point to more advanced tests is in `_suite/runner.d` which is a runna
 * `_suite/runner.d responses` - prints out sampled response from each benchmark service
 * `_suite/runner.d versions` - prints out used language versions in Markdown table format
 
-Use `_suite/runner.d bench -h` to print out CLI interface help.
+Use `_suite/runner.d -h` to print out CLI interface help.
 
 Sample:
 

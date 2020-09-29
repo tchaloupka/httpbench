@@ -61,6 +61,8 @@ void printGlobalDescription()
     writeln("Use one of it's subcommands:");
     immutable maxLen = commands.map!(a => a.name.length).maxElement + 2;
     foreach (c; commands) writeln(c.name.pad(maxLen), " - ", c.desc);
+    writeln();
+    writeln("Use 'runner.d <cmd> -h/--help' to print individual command help");
 }
 
 int main(string[] args)
@@ -96,6 +98,16 @@ int main(string[] args)
 
 int runVersions(string[] args)
 {
+    auto opts = args.getopt();
+    if (opts.helpWanted)
+    {
+        defaultGetoptPrinter(
+            "Prints used compilers versions.\n"
+            ~ "Usage: runner.d versions\n",
+            opts.options);
+        return 0;
+    }
+
     struct VersionInfo
     {
         string compiler;
