@@ -662,7 +662,7 @@ void warmup(ref Benchmark bench)
     // warmup with benchmark tool
     auto ret = tool == Tool.hey
         ? runHey(numReq / 10, numClients, 5)
-        : runWrk(numClients, threads, reqTimeout, duration / 10);
+        : runWrk(numClients, threads, reqTimeout, max(1, duration / 10));
     enforce(ret.status == 0, "Warmup failed: " ~ ret.output);
     TRACE(ret.output);
 }
