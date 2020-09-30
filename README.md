@@ -72,7 +72,7 @@ It's easier to generate ssh key and copy it's identity to the load generator hos
 
 Load tester (hey) must be installed on the load tester host.
 
-Host that generates load should be ideally more prefermant.
+Host that generates load should be ideally more performant.
 
 ### Frameworks / libraries
 
@@ -140,7 +140,11 @@ It has parser, router, and response writer.
 
 ##### [mecca](https://code.dlang.org/packages/mecca)
 
-**TBD**
+Core library from [Weka](https://www.weka.io/).
+
+It uses it's own low level fibers implementation.
+
+**Note:** Uses some hacks to access `druntime` internals so it'd be able to switch fibers. But it won't compile with current release and some compilers. I've tried to patch it, but it still can have some problems.
 
 ##### [photon](https://github.com/DmitryOlshansky/photon)
 

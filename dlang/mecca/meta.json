@@ -1,0 +1,9 @@
+[
+    {
+        "type": "singleCore",
+        "category": "micro",
+        "preCmd": ["./fetch.sh"],
+        "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
+        "runCmd": ["./app"]
+    }
+]
