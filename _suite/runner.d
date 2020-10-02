@@ -498,7 +498,7 @@ auto loadBenchmarks()
 // workaround for #20765 (fixed in dmd-2.094.0)
 string fixLocal(string cmd, string workDir)
 {
-    if (cmd.startsWith("./")) return buildPath(workDir, cmd);
+    if (cmd.startsWith('.')) return cmd.absolutePath(workDir).buildNormalizedPath;
     return cmd;
 }
 
@@ -540,8 +540,8 @@ void genTable(Benchmark[] benchmarks)
         if (maxErr)
         {
             auto vals = tool == Tool.hey
-                ? [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMin, maxMax, max25, maxMed, max75, max99]
-                : [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMax, maxMed, max75, max90, max99];
+                ? [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMin, max25, maxMed, max75, max99, maxMax]
+                : [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, max75, max90, max99, maxMax];
             if (!hasErrors) vals = vals.remove(2);
             maxVals = (vals.length - 1) * 3 + vals.sum();
             if (maxVals < maxErr)
@@ -564,11 +564,11 @@ void genTable(Benchmark[] benchmarks)
         cols ~= ["RPS".pad(maxRPS), "BPS".pad(maxBPS)];
         if (tool == Tool.hey)
             cols ~= [
-                "min".pad(maxMin), "max".pad(maxMax),
-                "25%".pad(max25), "50%".pad(maxMed), "75%".pad(max75), "99%".pad(max99)
+                "min".pad(maxMin), "25%".pad(max25), "50%".pad(maxMed),
+                "75%".pad(max75), "99%".pad(max99), "max".pad(maxMax)
             ];
         else cols ~= [
-                "max".pad(maxMax), "50%".pad(maxMed), "75%".pad(max75), "90%".pad(max90), "99%".pad(max99)
+                "50%".pad(maxMed), "75%".pad(max75), "90%".pad(max90), "99%".pad(max99), "max".pad(maxMax)
             ];
         writeln("| ", cols.joiner(" | "), " |");
         auto pads = [maxRes, maxRequests, maxErrors, maxRPS, maxBPS];
@@ -579,8 +579,8 @@ void genTable(Benchmark[] benchmarks)
             [maxLang, maxFW, maxCat, maxName].map!(a => pad!'-'(a)).joiner(":|:"), ":| ",
             pads.map!(a => pad!'-'(a)).joiner(":| "), ":| ",
             (tool == Tool.hey
-                ? [maxMin, maxMax, max25, maxMed, max75, max99]
-                : [maxMax, maxMed, max75, max90, max99]
+                ? [maxMin, max25, maxMed, max75, max99, maxMax]
+                : [maxMed, max75, max90, max99, maxMax]
             ).map!(a => pad!'-'(a))
                 .joiner(":| "),
             ":|"
@@ -623,17 +623,17 @@ void genTable(Benchmark[] benchmarks)
                     (tool == Tool.hey
                         ? [
                             b.stats.min.to!string.padLeft(maxMin),
-                            b.stats.max.to!string.padLeft(maxMax),
                             b.stats.under25.to!string.padLeft(max25),
                             b.stats.med.to!string.padLeft(maxMed),
                             b.stats.under75.to!string.padLeft(max75),
-                            b.stats.under99.to!string.padLeft(max99)]
+                            b.stats.under99.to!string.padLeft(max99),
+                            b.stats.max.to!string.padLeft(maxMax)]
                         : [
-                            b.stats.max.to!string.padLeft(maxMax),
                             b.stats.med.to!string.padLeft(maxMed),
                             b.stats.under75.to!string.padLeft(max75),
                             b.stats.under90.to!string.padLeft(max90),
-                            b.stats.under99.to!string.padLeft(max99)]
+                            b.stats.under99.to!string.padLeft(max99),
+                            b.stats.max.to!string.padLeft(maxMax)]
                     ).joiner(" | "),
                     " |");
             }
@@ -736,7 +736,7 @@ void waitResponse(ref Benchmark bench)
     DIAG("Awaiting response from ", bench.id);
 
     // wait for service to start responding
-    int retry = 5;
+    int retry = 50;
     string localUri = "http://127.0.0.1:8080/" ~ testPath;
     while (true)
     {
