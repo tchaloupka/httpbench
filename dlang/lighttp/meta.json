@@ -4,5 +4,12 @@
         "category": "platform",
         "buildCmd": ["dub", "build", "--single", "app.d"],
         "runCmd": ["./app"]
+    },
+    {
+        "name": "prefork",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "runCmd": ["../../_suite/prefork.d", "./app"]
     }
 ]

@@ -5,5 +5,13 @@
         "preCmd": ["./fetch.sh"],
         "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
         "runCmd": ["./app"]
+    },
+    {
+        "name": "prefork",
+        "type": "multiCore",
+        "category": "micro",
+        "preCmd": ["./fetch.sh"],
+        "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
+        "runCmd": ["../../_suite/prefork.d", "./app"]
     }
 ]

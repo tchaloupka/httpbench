@@ -11,8 +11,8 @@ index 834778c..293622e 100644
  {
 -    import core.cpuid;
 -    uint threads = threadsPerCPU;
-+    import core.cpuid : threadsPerCPU;
-+    if (!threads) threads = threadsPerCPU;
++    import std.parallelism : totalCPUs;
++    if (!threads) threads = totalCPUs;
 
      event_loop_fd = cast(int)epoll_create1(0).checked("ERROR: Failed to create event-loop!");
      // use RT signals, disable default termination on signal received

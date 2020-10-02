@@ -42,7 +42,7 @@ void main()
         }
     }
 
-    auto listener = listenTCP(8080, &staticAnswer, "0.0.0.0");
+    auto listener = listenTCP(8080, &staticAnswer, "0.0.0.0", TCPListenOptions.reusePort);
     logInfo("Listening to HTTP requests on http://127.0.0.1:8080/");
 
     runApplication();

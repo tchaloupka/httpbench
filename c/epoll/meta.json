@@ -10,5 +10,17 @@
         "type": "singleCore",
         "buildCmd": ["make", "level"],
         "runCmd": ["./http_epoll", "8080"]
+    },
+    {
+        "name": "raw - edge (PF)",
+        "type": "multiCore",
+        "buildCmd": ["make", "edge"],
+        "runCmd": ["../../_suite/prefork.d", "./http_epoll", "--", "8080"]
+    },
+    {
+        "name": "raw - lvl (PF)",
+        "type": "multiCore",
+        "buildCmd": ["make", "level"],
+        "runCmd": ["../../_suite/prefork.d", "./http_epoll", "--", "8080"]
     }
 ]

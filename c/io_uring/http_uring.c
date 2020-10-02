@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     // setup socket
     int sock_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     const int val = 1;
-    if (setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)) == -1
+    if (setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEPORT, &val, sizeof(val)) == -1
         || setsockopt(sock_listen_fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1) {
         perror("setsockopt()");
         exit(1);

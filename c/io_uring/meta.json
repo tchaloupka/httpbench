@@ -4,5 +4,11 @@
         "type": "singleCore",
         "buildCmd": ["make", "http_uring"],
         "runCmd": ["./http_uring", "8080"]
+    },
+    {
+        "name": "raw (PF)",
+        "type": "multiCore",
+        "buildCmd": ["make", "http_uring"],
+        "runCmd": ["../../_suite/prefork.d", "./http_uring", "--", "8080"]
     }
 ]

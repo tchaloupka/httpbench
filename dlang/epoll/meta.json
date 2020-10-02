@@ -16,5 +16,23 @@
             "DFLAGS": "--betterC"
         },
         "runCmd": ["./app"]
+    },
+    {
+        "name": "raw - edge (PF)",
+        "type": "multiCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": "--betterC --d-version=EdgeTriggered"
+        },
+        "runCmd": ["../../_suite/prefork.d", "./app"]
+    },
+    {
+        "name": "raw - lvl (PF)",
+        "type": "multiCore",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": "--betterC"
+        },
+        "runCmd": ["../../_suite/prefork.d", "./app"]
     }
 ]

@@ -10,5 +10,17 @@
         "type": "singleCore",
         "buildCmd": ["dub", "-v", "build", "--single", "http-server-fibers.d"],
         "runCmd": ["./http-server-fibers"]
+    },
+    {
+        "name": "cb (PF)",
+        "type": "multiCore",
+        "buildCmd": ["dub", "build", "--single", "http-server.d"],
+        "runCmd": ["../../_suite/prefork.d", "./http-server"]
+    },
+    {
+        "name": "fibers (PF)",
+        "type": "multiCore",
+        "buildCmd": ["dub", "-v", "build", "--single", "http-server-fibers.d"],
+        "runCmd": ["../../_suite/prefork.d", "./http-server-fibers"]
     }
 ]

@@ -179,7 +179,7 @@ void main()
 {
     print("Starting up...");
     auto addr = new InternetAddress("0.0.0.0", 8080);
-    auto listener = eventDriver.sockets.listenStream(addr, toDelegate(&onClientConnect));
+    auto listener = eventDriver.sockets.listenStream(addr, StreamListenOptions.reusePort, toDelegate(&onClientConnect));
     enforce(listener != StreamListenSocketFD.invalid, "Failed to listen for connections.");
 
     /*import core.time : msecs;

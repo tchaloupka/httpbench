@@ -7,5 +7,14 @@
             "DFLAGS": "--betterC"
         },
         "runCmd": ["./raw/app"]
+    },
+    {
+        "name": "raw (PF)",
+        "type": "multiCore",
+        "buildCmd": ["dub", "build", "--single", "raw/app.d"],
+        "buildEnv": {
+            "DFLAGS": "--betterC"
+        },
+        "runCmd": ["../../_suite/prefork.d", "./raw/app"]
     }
 ]

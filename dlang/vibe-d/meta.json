@@ -34,5 +34,24 @@
         "category": "platform",
         "buildCmd": ["dub", "build", "--single", "app.d"],
         "runCmd": ["./app"]
+    },
+    {
+        "name": "manual (PF)",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": "--d-version=VibeManualMemoryManagement"
+        },
+        "runCmd": ["../../_suite/prefork.d", "./app"],
+        "runEnv": { "WORKERS": "1" }
+    },
+    {
+        "name": "gc (PF)",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--single", "app.d"],
+        "runCmd": ["../../_suite/prefork.d", "./app"],
+        "runEnv": { "WORKERS": "1" }
     }
 ]
