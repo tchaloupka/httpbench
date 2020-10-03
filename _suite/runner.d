@@ -311,6 +311,7 @@ int runResponses(string[] args)
 
 // benchmark params
 enum Tool { hey, wrk }
+enum Format { csv, markdown }
 string testURL;
 string remoteHost;
 int numReq = 64_000;        // number of requests to test
@@ -322,6 +323,7 @@ bool keepalive = true;
 Tool tool = Tool.wrk;
 uint duration = 10;
 uint threads;
+Format fmt = Format.markdown;
 
 int runBench(string[] args)
 {
@@ -356,7 +358,8 @@ int runBench(string[] args)
         "tool", "Tool to use as a load generator. One of hey, wrk. Default is wrk.", &tool,
         "duration|d", "Duration of the individual test in seconds to use with wrk tool. Default is 10s.", &duration,
         "threads", "Total number of threads to use with wrk tool. Default is host number of CPUs.", &threads,
-        "ignore|i", IGNORE_DESC, &ignore
+        "ignore|i", IGNORE_DESC, &ignore,
+        "format|f", "Output format (one of csv, markdown - default).", &fmt
     );
 
     if (opts.helpWanted)
@@ -440,7 +443,12 @@ int runBench(string[] args)
         return false;
     });
 
-    benchmarks.genTable();
+    final switch (fmt)
+    {
+        case Format.markdown: benchmarks.genMarkdownTable(); break;
+        case Format.csv: benchmarks.genCsvTable(); break;
+    }
+
 
     return 0;
 }
@@ -517,7 +525,7 @@ string fixLocal(string cmd, string workDir)
 }
 
 // generate output as Markdown table
-void genTable(Benchmark[] benchmarks)
+void genMarkdownTable(Benchmark[] benchmarks)
 {
     foreach (ch; benchmarks.chunkBy!(a => a.benchType))
     {
@@ -653,6 +661,57 @@ void genTable(Benchmark[] benchmarks)
             }
         }
         writeln();
+    }
+}
+
+void genCsvTable(Benchmark[] benchmarks)
+{
+    enum string SEP = ";";
+
+    string[] cols = ["Type", "Language", "Framework", "Category", "Name", "Res[B]", "Req", "Err", "RPS", "BPS"];
+    if (tool == Tool.hey)
+        cols ~= ["min", "25%", "50%", "75%", "99%", "max"];
+    else
+        cols ~= ["50%", "75%", "90%", "99%", "max"];
+
+    writeln(cols.joiner(SEP));
+    foreach (ref b; benchmarks)
+    {
+        if (b.err) continue; // don't output them in csv
+
+        cols = [
+            b.benchType.to!string,
+            b.language,
+            b.framework,
+            b.category.to!string,
+            b.name,
+            b.res.length.to!string,
+            b.stats.total.to!string,
+            b.stats.errors.to!string,
+            b.stats.rps.to!string,
+            b.bps.to!string
+        ];
+
+        std.stdio.write(cols.joiner(SEP), SEP);
+        if (tool == Tool.hey)
+            cols = [
+                b.stats.min.to!string,
+                b.stats.under25.to!string,
+                b.stats.med.to!string,
+                b.stats.under75.to!string,
+                b.stats.under99.to!string,
+                b.stats.max.to!string
+            ];
+        else
+            cols = [
+                b.stats.med.to!string,
+                b.stats.under75.to!string,
+                b.stats.under90.to!string,
+                b.stats.under99.to!string,
+                b.stats.max.to!string
+            ];
+
+        writeln(cols.joiner(SEP));
     }
 }
 
