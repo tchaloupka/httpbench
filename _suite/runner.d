@@ -236,13 +236,20 @@ int runList(string[] args)
     return 0;
 }
 
+enum IGNORE_DESC =
+    "Comma separated list of tests to ignore. This can be combined with the provided tests to refine tests selection."
+    ~ "(Partial text can be used as tests are being ignored where their identifier contains it)."
+    ~ "Sample usage: 'runner.d bench dlang -i hunt' - runs all dlang tests but not hunt ones.";
+
 int runResponses(string[] args)
 {
     bool verbose, vverbose, quiet;
+    string ignore;
     auto opts = args.getopt(
         "verbose|v", "Verbose output", &verbose,
         "vverbose", "Most verbose output", &vverbose,
-        "quiet|q", "Output just the results", &quiet
+        "quiet|q", "Output just the results", &quiet,
+        "ignore|i", IGNORE_DESC, &ignore
     );
 
     if (opts.helpWanted)
@@ -263,9 +270,7 @@ int runResponses(string[] args)
         minLogLevel = LogLevel.none;
     }
 
-    auto benchmarks = loadBenchmarks().array;
-    if (args.length > 1)
-        benchmarks = benchmarks.filter!(a => args[1..$].canFind!((a,b) => b.canFind(a))(a.id)).array;
+    auto benchmarks = loadBenchmarks(args[1..$], ignore).array;
 
     // get responses
     foreach (ref b; benchmarks)
@@ -322,7 +327,7 @@ int runBench(string[] args)
 {
     BenchmarkType benchType = BenchmarkType.all;
     bool verbose, vverbose, quiet;
-    string host;
+    string host, ignore;
 
     auto opts = args.getopt(
         "type", "Type of benchmark to run - one of all, singleCore, multiCore (default: all)", &benchType,
@@ -350,7 +355,8 @@ int runBench(string[] args)
         "keepalive", "Should workload generator use same connection for multiple requests? Default true.", &keepalive,
         "tool", "Tool to use as a load generator. One of hey, wrk. Default is wrk.", &tool,
         "duration|d", "Duration of the individual test in seconds to use with wrk tool. Default is 10s.", &duration,
-        "threads", "Total number of threads to use with wrk tool. Default is host number of CPUs.", &threads
+        "threads", "Total number of threads to use with wrk tool. Default is host number of CPUs.", &threads,
+        "ignore|i", IGNORE_DESC, &ignore
     );
 
     if (opts.helpWanted)
@@ -413,9 +419,8 @@ int runBench(string[] args)
 
     DIAG("Test url: ", testURL);
 
-    auto benchmarks = loadBenchmarks().filter!(a => (a.benchType & benchType)).array;
-    if (args.length > 1)
-        benchmarks = benchmarks.filter!(a => args[1..$].canFind!((a,b) => b.canFind(a))(a.id)).array;
+    auto benchmarks = loadBenchmarks(args[1..$], ignore)
+        .filter!(a => (a.benchType & benchType)).array;
 
     // run benchmarks
     foreach (ref b; benchmarks) b.run();
@@ -440,7 +445,7 @@ int runBench(string[] args)
     return 0;
 }
 
-auto loadBenchmarks()
+auto loadBenchmarks(string[] tests = null, string ignore = null)
 {
     string rootDir = getcwd();
 
@@ -491,6 +496,15 @@ auto loadBenchmarks()
         if (a.benchType == b.benchType) return a.name < b.name;
         return false;
     });
+
+    if (tests.length)
+        benchmarks = benchmarks.filter!(a => tests.canFind!((a,b) => b.canFind(a))(a.id)).array;
+    if (ignore)
+    {
+        auto ig = ignore.splitter(',').map!(a => a.strip).filter!(a => a.length).array;
+        if (ig.length)
+            benchmarks = benchmarks.filter!(a => !ig.canFind!((a,b) => b.canFind(a))(a.id)).array;
+    }
 
     return benchmarks;
 }
