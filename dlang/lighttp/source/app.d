@@ -1,9 +1,3 @@
-#!/bin/env dub
-/+ dub.sdl:
-    name "app"
-    dependency "lighttp" version=">=0.5.4"
-+/
-
 import lighttp;
 
 void main(string[] args) {

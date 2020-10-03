@@ -1,0 +1,10 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"libasync": "0.8.6",
+		"lighttp": "0.5.4",
+		"memutils": "1.0.4",
+		"urld": "2.1.1",
+		"xbuffer": "1.0.0"
+	}
+}
