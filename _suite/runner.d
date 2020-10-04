@@ -323,6 +323,7 @@ bool keepalive = true;
 Tool tool = Tool.wrk;
 uint duration = 10;
 uint threads;
+uint pipeline = 1;
 Format fmt = Format.markdown;
 
 int runBench(string[] args)
@@ -359,7 +360,8 @@ int runBench(string[] args)
         "duration|d", "Duration of the individual test in seconds to use with wrk tool. Default is 10s.", &duration,
         "threads", "Total number of threads to use with wrk tool. Default is host number of CPUs.", &threads,
         "ignore|i", IGNORE_DESC, &ignore,
-        "format|f", "Output format (one of csv, markdown - default).", &fmt
+        "format|f", "Output format (one of csv, markdown - default).", &fmt,
+        "pipeline", "How many requests should be HTTP pipelined (wrk tool only, default is 1 - no HTTP pipelining).", &pipeline
     );
 
     if (opts.helpWanted)
@@ -417,7 +419,21 @@ int runBench(string[] args)
         enforce(ret.status == 0, "Error determinig host number of CPUs: " ~ ret.output);
         threads = ret.output.stripRight.to!uint;
         if ((benchType & BenchmarkType.singleCore) && !remoteHost) threads--; // leave some for singleCore test process
-		if (numClients < threads) threads = numClients;
+        if (numClients < threads) threads = numClients;
+    }
+
+    pipeline = max(1, pipeline);
+    if (pipeline > 1 && remoteHost)
+    {
+        // prep pipeline.lua on the host
+        DIAG("Copying pipeline.lua to host ", remoteHost);
+        auto pip = buildPath(getSuiteDir(), "pipeline.lua");
+        auto ret = execute(["scp", pip, remoteHost ~ ":/tmp/"]);
+        if (ret.status != 0)
+        {
+            ERROR("Failed to copy ", pip, " to ", remoteHost, ": ", ret.output);
+            return 1;
+        }
     }
 
     DIAG("Test url: ", testURL);
@@ -870,7 +886,7 @@ void test(ref Benchmark bench)
         {
             auto ret = tool == Tool.hey
                 ? runHey(numReq, numClients, reqTimeout, "csv")
-                : runWrk(numClients, threads, reqTimeout, duration);
+                : runWrk(numClients, threads, reqTimeout, duration, pipeline);
             enforce(ret.status == 0, "Test failed: " ~ ret.output);
 
             Results tmp = tool == Tool.hey ? ret.output.parseHeyResults() : ret.output.parseWrkResults();
@@ -997,7 +1013,7 @@ auto runHey(int requests, int clients, int timeout, string fmt = null)
     return execute(args);
 }
 
-auto runWrk(uint clients, uint threads, int timeout, uint duration)
+auto runWrk(uint clients, uint threads, int timeout, uint duration, uint pipeline = 0)
 {
     string[] args = [
         "wrk",
@@ -1008,6 +1024,14 @@ auto runWrk(uint clients, uint threads, int timeout, uint duration)
         "--latency",
         testURL
     ];
+
+    if (pipeline > 1)
+    {
+        if (remoteHost)
+            args ~= ["-s", "/tmp/pipeline.lua", "--", pipeline.to!string];
+        else
+            args ~= ["-s", buildPath(getSuiteDir(), "pipeline.lua"), "--", pipeline.to!string];
+    }
 
     if (remoteHost) args = ["ssh", remoteHost, args.joiner(" ").text];
     return execute(args);
@@ -1070,6 +1094,14 @@ void killPid(int pid)
     enforce(kill(pid, SIGKILL) == 0, format!"Failed to send SIGKILL to %s: %s"(pid, errno));
     if (wait(pid)) return;
     throw new Exception("Failed to kill process");
+}
+
+string getSuiteDir()
+{
+    string cwd = getcwd;
+    immutable sidx = cwd.countUntil("_suite");
+    if (sidx > 0) return cwd[0..sidx+"_suite".length];
+    return buildPath(cwd, "_suite");
 }
 
 enum BenchmarkType
