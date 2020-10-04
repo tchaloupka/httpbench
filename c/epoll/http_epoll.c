@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
@@ -13,14 +14,16 @@
 
 #define BACKLOG 512
 #define MAX_EVENTS 128
-#define MAX_MESSAGE_LEN 512
+#define MAX_MESSAGE_LEN 4096
 #define MAX_CLIENTS 2048
+#define MAX_RESPONSES 512
 
 void error(char* msg);
 void closeClient(int epollfd, int clientfd);
+int countRequests(char *buf, int len, int *nextReq);
 
 struct Client {
-    char buffer[MAX_MESSAGE_LEN];
+    char *buffer;
     int len;
 };
 
@@ -36,6 +39,8 @@ const char response[] =
 
 const char sep[] = "\r\n\r\n";
 
+char *responseBuff;
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -50,13 +55,20 @@ int main(int argc, char *argv[])
 
     struct Client clients[MAX_CLIENTS];
 
+    // disable SIGPIPE
+    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+        perror("signal()");
+        return 1;
+    }
+
     // setup socket
     int sock_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (sock_listen_fd < 0) {
         error("Error creating socket..\n");
     }
     const int val = 1;
-    if (setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEPORT, &val, sizeof(val)) == -1
+    if (setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)) == -1
+        || setsockopt(sock_listen_fd, SOL_SOCKET, SO_REUSEPORT, &val, sizeof(val)) == -1
         || setsockopt(sock_listen_fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1) {
         perror("setsockopt()");
         exit(1);
@@ -90,6 +102,12 @@ int main(int argc, char *argv[])
         error("Error adding new listeding socket to epoll..\n");
     }
 
+    // prep sendbuffer
+    responseBuff = malloc(MAX_RESPONSES * (sizeof(response) - 1));
+    for (int i = 0; i < MAX_RESPONSES; ++i) {
+        memcpy(responseBuff + i*(sizeof(response) - 1), response, (sizeof(response) - 1));
+    }
+
     while(1)
     {
         new_events = epoll_wait(epollfd, events, MAX_EVENTS, -1);
@@ -115,6 +133,7 @@ int main(int argc, char *argv[])
                     error("Error adding new event to epoll..\n");
                 }
                 clients[sock_conn_fd].len = 0; // reset client buffer len
+                clients[sock_conn_fd].buffer = malloc(MAX_MESSAGE_LEN);
                 #ifdef DEBUG
                 printf("new client: fd=%d\n", sock_conn_fd);
                 #endif
@@ -151,28 +170,42 @@ int main(int argc, char *argv[])
                     goto read;
                 #endif
 
-                parse:
-                // Check if http request is complete.
-                // We can assume that it must end with \r\n\r\n for this benchmark - but hell no for real http server! :)
-                if (clients[clientfd].len < 4
-                    || bcmp(sep, clients[clientfd].buffer + clients[clientfd].len - 4, 4) != 0)
-                    continue;
+                parse: ;
+                // Check if http request is complete (very simplistic parser unusable in real servers)
+                int nextReq;
+                int numReq = countRequests(clients[clientfd].buffer, clients[clientfd].len, &nextReq);
 
-                bytes = send(clientfd, response, sizeof(response) - 1, MSG_NOSIGNAL);
-                if (__builtin_expect(bytes <= 0, 0))
-                {
-                    if (errno == EAGAIN) {
-                        fprintf(stderr, "FIXME: System send buffer full\n");
+                if (numReq) {
+                    if (__builtin_expect(numReq > MAX_RESPONSES, 0)) {
+                        fprintf(stderr, "FIXME: Too many responses needed\n");
                         exit(1);
                     }
-                    closeClient(epollfd, clientfd);
-                    continue;
+                    bytes = send(clientfd, responseBuff, numReq * (sizeof(response) - 1), 0);
+                    if (__builtin_expect(bytes <= 0, 0)) {
+                        if (errno == EAGAIN) {
+                            fprintf(stderr, "FIXME: System send buffer full\n");
+                            exit(1);
+                        }
+                        closeClient(epollfd, clientfd);
+                    }
+
+                    if (__builtin_expect(bytes != numReq * (sizeof(response) - 1), 0)) {
+                        fprintf(stderr, "FIXME: Whole response not sent\n");
+                        exit(1);
+                    }
+
+                    if (nextReq == clients[clientfd].len) {
+                        clients[clientfd].len = 0; // whole requests handled
+                        continue;
+                    }
+
+                    if (nextReq) {
+                        // we don't care about content, just looking for the request separator -> 4B are enough
+                        printf("copy\n");
+                        memcpy(clients[clientfd].buffer, clients[clientfd].buffer + clients[clientfd].len - 4, 4);
+                        clients[clientfd].len = 4;
+                    }
                 }
-                if (__builtin_expect(bytes != sizeof(response) - 1, 0)) {
-                    fprintf(stderr, "FIXME: Whole response not sent\n");
-                    exit(1);
-                }
-                clients[clientfd].len = 0;
             }
         }
     }
@@ -184,6 +217,26 @@ void closeClient(int epollfd, int clientfd) {
     #endif
     epoll_ctl(epollfd, EPOLL_CTL_DEL, clientfd, NULL);
     close(clientfd);
+}
+
+int countRequests(char *buf, int len, int *nextReq) {
+    if (__builtin_expect(len < 4, 0)) return 0;
+
+    int res = 0;
+    *nextReq = 0;
+    for (int idx = 0; idx <= len - 4; ++idx) {
+        if (__builtin_expect(buf[idx] == '\r', 0)) {
+            if (bcmp(sep, buf + idx, 4) != 0) {
+                idx += 4;
+                continue;
+            }
+
+            *nextReq = idx+4;
+            ++res;
+        }
+    }
+
+    return res;
 }
 
 void error(char* msg)

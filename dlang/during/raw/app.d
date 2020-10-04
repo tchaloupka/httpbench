@@ -20,6 +20,7 @@ enum MAX_SQE             = 512;
 enum BACKLOG             = 512;
 enum MAX_MESSAGE_LEN     = 1024;
 enum BUFFERS_COUNT       = 4096;
+enum MAX_RESPONSES = 512;
 
 enum OP : ushort { ACCEPT, READ, WRITE, PROV_BUF }
 
@@ -37,7 +38,6 @@ enum group_id = 1337;
 
 extern(C) int main()
 {
-    static immutable ubyte[4] reqTerm = [13, 10, 13, 10];
     static immutable ubyte[] response = cast(immutable ubyte[])(
                 "HTTP/1.1 200 OK\r\n"
                 ~ "Server: epoll/raw_0123456789012345678901234567890123456789\r\n"
@@ -47,6 +47,10 @@ extern(C) int main()
                 ~ "Content-Length: 13\r\n"
                 ~ "\r\n"
                 ~ "Hello, World!");
+
+    ubyte[] responseBuff = (cast(ubyte*)malloc(MAX_RESPONSES * response.length))[0..MAX_RESPONSES * response.length];
+    foreach (i; 0..MAX_RESPONSES)
+        responseBuff[i*response.length .. (i+1)*response.length] = response[];
 
     // setup socket
     immutable listenFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -162,20 +166,28 @@ extern(C) int main()
                     immutable bid = cast(ushort)(cqe.flags >> 16); // get used buffer id
 
                     // parse request
-                    import std.algorithm : endsWith;
-                    if (_expect(bufs[bid][0..bytes].endsWith(reqTerm[]), true))
-                    {
-                        // re-add the buffer if consumed
-                        // debug printf("Provide back unused buffer: fd=%d, bid=%d, flafs=%04x\n", ctx.fd, bid, cqe.flags);
-                        io.next
-                            .prepProvideBuffer(bufs[bid], group_id, bid)
-                            .setUserDataRaw(OperationCtx(0, OP.PROV_BUF));
+                    int nextReq;
+                    immutable nReq = countRequests(bufs[bid][0..bytes], nextReq);
 
-                        io.next
-                            .prepSend(ctx.fd, response)
-                            .setUserDataRaw(OperationCtx(ctx.fd, OP.WRITE));
-                    }
-                    else assert(0, "FIXME: Incomplete read");
+                    if (_expect(nReq == 0 || nextReq != bytes, false))
+                        assert(0, "FIXME: partial request handling not implemented");
+
+                    if (_expect(nReq > MAX_RESPONSES, false))
+                        assert(0, "FIXME: response buffer too small");
+
+                    // re-add the buffer if consumed
+                    // debug printf("Provide back unused buffer: fd=%d, bid=%d, flafs=%04x\n", ctx.fd, bid, cqe.flags);
+                    io.next
+                        .prepProvideBuffer(bufs[bid], group_id, bid)
+                        .setUserDataRaw(OperationCtx(0, OP.PROV_BUF));
+
+                    io.next
+                        .prepSend(ctx.fd, responseBuff[0..nReq*response.length])
+                        .setUserDataRaw(OperationCtx(ctx.fd, OP.WRITE));
+
+                    io.next
+                        .prepRecv(ctx.fd, group_id, MAX_MESSAGE_LEN)
+                        .setUserDataRaw(OperationCtx(ctx.fd, OP.READ));
                     break;
                 case OP.WRITE:
                     if (_expect(cqe.res <= 0, false))
@@ -184,14 +196,35 @@ extern(C) int main()
                         close(ctx.fd);
                         break;
                     }
-                    assert(cqe.res == response.length, "FIXME: Incomplete write");
-                    io.next
-                        .prepRecv(ctx.fd, group_id, MAX_MESSAGE_LEN)
-                        .setUserDataRaw(OperationCtx(ctx.fd, OP.READ));
                     break;
             }
         }
     }
+}
+
+int countRequests(ubyte[] buf, out int nextReq)
+{
+    static immutable ubyte[4] sep = [13, 10, 13, 10];
+
+    if (_expect(buf.length < 4, false)) return 0;
+
+    int res = 0;
+    for (int idx = 0; idx <= buf.length - 4; ++idx)
+    {
+        if (_expect(buf[idx] == '\r', false))
+        {
+            if (buf[idx .. idx + 4] != sep)
+            {
+                idx += 4;
+                continue;
+            }
+
+            nextReq = idx+4;
+            ++res;
+        }
+    }
+
+    return res;
 }
 
 void error(string msg)() { perror(msg); exit(1); }

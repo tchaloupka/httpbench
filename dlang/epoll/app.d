@@ -17,12 +17,12 @@ nothrow @nogc:
 enum BACKLOG = 512;
 enum MAX_EVENTS = 256;
 enum MAX_CLIENTS = 512;
-enum MAX_MESSAGE_LEN = 1024;
+enum MAX_MESSAGE_LEN = 2048;
 enum SOCK_NONBLOCK = 0x800;
+enum MAX_RESPONSES = 512;
 
 extern(C) void main()
 {
-    static immutable ubyte[4] reqTerm = [13, 10, 13, 10];
     static immutable ubyte[] response = cast(immutable ubyte[])(
                 "HTTP/1.1 200 OK\r\n"
                 ~ "Server: epoll/raw_0123456789012345678901234567890123456789\r\n"
@@ -32,6 +32,10 @@ extern(C) void main()
                 ~ "Content-Length: 13\r\n"
                 ~ "\r\n"
                 ~ "Hello, World!");
+
+    ubyte[] responseBuff = (cast(ubyte*)malloc(MAX_RESPONSES * response.length))[0..MAX_RESPONSES * response.length];
+    foreach (i; 0..MAX_RESPONSES)
+        responseBuff[i*response.length .. (i+1)*response.length] = response[];
 
     // setup socket
     immutable listenFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -120,12 +124,17 @@ extern(C) void main()
 
             parse:
             // parse request
-            import std.algorithm : endsWith;
-            if (clients[fd].buffer[0..clients[fd].len].endsWith(reqTerm[]))
-            {
-                send(fd, &response[0], response.length, 0);
-                clients[fd].len = 0;
-            }
+            int nextReq;
+            immutable nReq = countRequests(clients[fd].buffer[0..clients[fd].len], nextReq);
+
+            if (_expect(nReq == 0 || nextReq != clients[fd].len, false))
+                assert(0, "FIXME: partial request handling not implemented");
+
+            if (_expect(nReq > MAX_RESPONSES, false))
+                assert(0, "FIXME: response buffer too small");
+
+            send(fd, &responseBuff[0], response.length * nReq, 0);
+            clients[fd].len = 0;
         }
     }
 }
@@ -145,6 +154,31 @@ struct Client
 }
 
 void error(string msg)() { perror(msg); exit(1); }
+
+int countRequests(ubyte[] buf, out int nextReq)
+{
+    static immutable ubyte[4] sep = [13, 10, 13, 10];
+
+    if (_expect(buf.length < 4, false)) return 0;
+
+    int res = 0;
+    for (int idx = 0; idx <= buf.length - 4; ++idx)
+    {
+        if (_expect(buf[idx] == '\r', false))
+        {
+            if (buf[idx .. idx + 4] != sep)
+            {
+                idx += 4;
+                continue;
+            }
+
+            nextReq = idx+4;
+            ++res;
+        }
+    }
+
+    return res;
+}
 
 extern (C) int accept4(int, sockaddr*, socklen_t*, int);
 
