@@ -12,8 +12,11 @@ It uses [docker](https://www.docker.com) container to build and host services on
 
 Tests can be run without docker too, one just needs to have installed tested language compilers and [wrk](https://github.com/wg/wrk)/[hey](https://github.com/rakyll/hey) workload generator (but this has been tested on linux only).
 
-**Note for io_uring tests:** - At least Linux kernel 5.7 is needed for tests to work.
-Problems with user limits on locked memory (`ulimit -l`) are possible too when run with regular user.
+**Note for io_uring tests:**
+
+* At least Linux kernel 5.7 is needed for tests to work.
+* Problems with user limits on locked memory (`ulimit -l`) are possible too when run with regular user.
+* There is some performance regression starting from [Kernel 5.7.16](https://github.com/axboe/liburing/issues/215). See also these: [#189](https://github.com/axboe/liburing/issues/189), [#8](https://github.com/frevib/io_uring-echo-server/issues/8).
 
 ## Tests
 
