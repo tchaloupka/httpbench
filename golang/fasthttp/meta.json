@@ -3,7 +3,6 @@
         "name": null,
         "type": "singleCore",
         "category": "platform",
-        "preCmd": ["go", "get"],
         "buildCmd": ["go", "build", "-o", "app", "."],
         "runCmd": ["./app"],
         "runEnv": {
@@ -14,7 +13,6 @@
         "name": null,
         "type": "multiCore",
         "category": "platform",
-        "preCmd": ["go", "get"],
         "buildCmd": ["go", "build", "-o", "app", "."],
         "runCmd": ["./app"]
     }
