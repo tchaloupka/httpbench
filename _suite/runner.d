@@ -936,7 +936,7 @@ Results parseHeyResults(string output)
 Results parseWrkResults(string output)
 {
     static auto maxReg = regex(`^\s+Latency\s+[0-9.]+\w+\s+[0-9.]+\w+\s+([0-9.]+)(\w+)`);
-    static auto latReg = regex(`^\s+(\d+)%\s+([0-9.]+)(\w+)$`);
+    static auto latReg = regex(`^\s+(\d+)%\s+([0-9.]+)(\w+).*$`);
     static auto totalReg = regex(`^\s+(\d+) requests in ([0-9.]+)(\w+)`);
     static auto errReg = regex(`^\s+Non-.*responses: (\d+)`);
 
