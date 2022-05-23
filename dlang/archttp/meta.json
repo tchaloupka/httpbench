@@ -3,14 +3,17 @@
         "name": "archttp",
         "type": "singleCore",
         "category": "platform",
-        "buildCmd": ["dub", "build", "--single", "archttp/app.d"],
-        "runCmd": ["./archttp/app", "1"]
+        "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": ""
+        },
+        "runCmd": ["./app", "1"]
     },
     {
         "name": "archttp",
         "type": "multiCore",
         "category": "platform",
-        "buildCmd": ["dub", "build", "--single", "archttp/app.d"],
-        "runCmd": ["./archttp/app"]
+        "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
+        "runCmd": ["./app"]
     }
 ]

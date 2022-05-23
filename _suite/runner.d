@@ -766,7 +766,9 @@ void applyDefaultBuildEnv(ref Benchmark bench)
     if (pbe)
     {
         auto pe = (*pbe).envName in bench.buildEnv;
-        if (pe) (*pe) ~= " " ~ (*pbe).defVal; // append
+        if (pe) {
+            if ((*pe).length) (*pe) ~= " " ~ (*pbe).defVal; // append only when it's not disabled by empty value
+        }
         else bench.buildEnv[(*pbe).envName] = (*pbe).defVal; // use just the defaults
     }
 }
