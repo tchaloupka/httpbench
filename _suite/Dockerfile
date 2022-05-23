@@ -8,7 +8,7 @@ RUN apt update \
 WORKDIR /opt
 
 # https://github.com/ldc-developers/ldc/releases
-ARG LDC=1.23.0
+ARG LDC=1.29.0
 RUN wget --progress=dot:giga -O - \
     https://github.com/ldc-developers/ldc/releases/download/v$LDC/ldc2-$LDC-linux-x86_64.tar.xz \
     | tar -xJ
@@ -16,7 +16,7 @@ ENV PATH="/opt/ldc2-$LDC-linux-x86_64/bin:${PATH}"
 
 # https://golang.org/dl/
 RUN wget --progress=dot:giga -O - \
-    https://golang.org/dl/go1.15.1.linux-amd64.tar.gz \
+    https://golang.org/dl/go1.18.2.linux-amd64.tar.gz \
     | tar -xz
 ENV PATH="/opt/go/bin/:${PATH}"
 ENV GOPATH="$HOME"
@@ -24,13 +24,13 @@ ENV GOBIN="$HOME/bin"
 
 # https://www.rust-lang.org/tools/install
 ENV CARGO_HOME="/opt/.cargo" PATH="/opt/.cargo/bin:${PATH}"
-RUN wget -O - https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # .Net Core SDK
 ENV \
     # Unset ASPNETCORE_URLS from aspnet base image
     ASPNETCORE_URLS= \
-    DOTNET_SDK_VERSION=5.0.100-rc.1.20452.10 \
+    DOTNET_SDK_VERSION=5.0.408 \
     # Enable correct mode for dotnet watch (only mode supported in a container)
     DOTNET_USE_POLLING_FILE_WATCHER=true \
     # Skip extraction of XML docs - generally not useful within an image/container - helps performance
@@ -39,7 +39,7 @@ ENV \
     POWERSHELL_DISTRIBUTION_CHANNEL=PSDocker-DotnetSDK-Ubuntu-20.04
 
 RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Sdk/$DOTNET_SDK_VERSION/dotnet-sdk-$DOTNET_SDK_VERSION-linux-x64.tar.gz \
-    && dotnet_sha512='d7e709dacc4bb188c2380060d24bfb5b791240dc33af8499fb4a31e1885a9377dad1d1ebc76847432ea67d5e4ac832a31679dc293e09fa6dade28f5fbbe4db9b' \
+    && dotnet_sha512='abbf22c420df2d8398d1616efa3d31e1b8f96130697746c45ad68668676d12e65ec3b4dd75f28a5dc7607da58b6e369693c0e658def15ce2431303c28e99db55' \
     && echo "$dotnet_sha512 dotnet.tar.gz" | sha512sum -c - \
     && mkdir -p /usr/share/dotnet \
     && tar -zxf dotnet.tar.gz -C /usr/share/dotnet \
@@ -71,9 +71,13 @@ RUN wget --progress=dot:giga -O - \
     && rm -rf /root/go
 
 # https://github.com/wg/wrk
-RUN git clone https://github.com/wg/wrk.git \
+RUN apt update \
+    && apt install -y unzip \
+    && git clone https://github.com/wg/wrk.git \
     && cd wrk && make && mv wrk /usr/local/bin/wrk \
-    && cd .. && rm -rf wrk
+    && cd .. && rm -rf wrk \
+    && apt purge -y unzip \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
 
 RUN go version && echo "---" \
     && ldc2 --version && echo "---" \
