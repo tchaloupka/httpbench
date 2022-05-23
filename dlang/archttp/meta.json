@@ -1,0 +1,16 @@
+[
+    {
+        "name": "archttp",
+        "type": "singleCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--single", "archttp/app.d"],
+        "runCmd": ["./archttp/app", "1"]
+    },
+    {
+        "name": "archttp",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--single", "archttp/app.d"],
+        "runCmd": ["./archttp/app"]
+    }
+]
