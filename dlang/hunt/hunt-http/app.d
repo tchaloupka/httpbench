@@ -1,7 +1,7 @@
 #!/bin/env dub
 /+ dub.sdl:
     name "app"
-    dependency "hunt-http" version=">=0.6.9"
+    dependency "hunt-http" version=">=0.8.2"
     // versions "HUNT_IO_DEBUG"
 +/
 

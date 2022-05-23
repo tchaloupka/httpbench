@@ -1,7 +1,7 @@
 #!/bin/env dub
 /+ dub.sdl:
     name "app"
-    dependency "vibe-core" version=">=1.10.0"
+    dependency "vibe-core" version=">=1.22.3"
 
     versions "VibeHighEventPriority" "VibeDisableCommandLineParsing"
 +/

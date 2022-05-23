@@ -1,6 +1,6 @@
 name "app"
 targetType "executable"
-dependency "arsd-official:cgi" version="~master"
+dependency "arsd-official:cgi" version="~>10.8.0"
 
 configuration "threads" {
     // the threads version works better on benchmarks due to various tradeoffs

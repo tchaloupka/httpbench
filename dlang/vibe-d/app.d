@@ -1,8 +1,8 @@
 #!/bin/env dub
 /+ dub.sdl:
     name "app"
-    dependency "vibe-d" version="0.9.1"
-    dependency "vibe-d:tls" version="0.9.1"
+    dependency "vibe-d" version=">=0.9.4"
+    dependency "vibe-d:tls" version=">=0.9.4"
 
     subConfiguration "vibe-d:tls" "notls"
     versions "VibeHighEventPriority" "VibeDisableCommandLineParsing"

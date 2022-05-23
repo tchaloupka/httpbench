@@ -3,7 +3,7 @@ index 70710e8..ce669d8 100644
 --- a/src/mecca/lib/exception.d
 +++ b/src/mecca/lib/exception.d
 @@ -46,7 +46,7 @@ private __gshared static TypeInfo_Class defaultTraceTypeInfo;
-
+ 
  shared static this() {
      defaultTraceTypeInfo = typeid(cast(Object)defaultTraceHandler(null));
 -    assert(defaultTraceTypeInfo.name == "core.runtime.defaultTraceHandler.DefaultTraceInfo", defaultTraceTypeInfo.name);
@@ -60,39 +60,55 @@ index 2338d8b..67b8936 100644
          pragma(mangle, "_D4core6thread6Thread7sm_cbegPSQBdQBbQx7Context") extern __gshared static
                  DRuntimeStackDescriptor* sm_cbeg;
      }
-
+ 
      @notrace void add() nothrow @nogc {
 -        auto slock = _slock();
 +        auto slock = _rtslock();
          slock.lock_nothrow();
          scope(exit) slock.unlock_nothrow();
-
+ 
 @@ -488,7 +509,7 @@ struct DRuntimeStackDescriptor {
      }
-
+ 
      @notrace void remove() nothrow @nogc {
 -        auto slock = _slock();
 +        auto slock = _rtslock();
          slock.lock_nothrow();
          scope(exit) slock.unlock_nothrow();
-
+ 
+diff --git a/src/mecca/platform/os/linux/time.d b/src/mecca/platform/os/linux/time.d
+index 341f361..4caf58c 100644
+--- a/src/mecca/platform/os/linux/time.d
++++ b/src/mecca/platform/os/linux/time.d
+@@ -68,7 +68,10 @@ struct Timer
+         sev.sigev_notify = SIGEV_THREAD_ID;
+         sev.sigev_signo = hangDetectorSig;
+         sev.sigev_value.sival_ptr = &hangDetectorTimerId;
+-        sev._sigev_un._tid = gettid();
++        static if (is(typeof(sev._sigev_un._tid)))
++            sev._sigev_un._tid = gettid();
++        else
++            sev._tid = gettid();
+ 
+         errnoEnforceNGC(timer_create(CLOCK_MONOTONIC, &sev, &hangDetectorTimerId) == 0,
+                 "timer_create for hang detector");
 diff --git a/src/mecca/reactor/io/fd.d b/src/mecca/reactor/io/fd.d
 index 2d668ca..3a41334 100644
 --- a/src/mecca/reactor/io/fd.d
 +++ b/src/mecca/reactor/io/fd.d
 @@ -263,8 +263,10 @@ struct ConnectedSocket {
-
+ 
          if( reuseAddr ) {
              sock.setSockOpt( SOL_SOCKET, SO_REUSEADDR, 1 );
 +            sock.setSockOpt( SOL_SOCKET, SO_REUSEPORT, 1 );
          }
-
+ 
 +        sock.setNagle(true);
          sock.osCallErrno!(.bind)(&sa.base, sa.len);
          sock.osCallErrno!(.listen)(LISTEN_BACKLOG);
-
+ 
 diff --git a/src/mecca/reactor/package.d b/src/mecca/reactor/package.d
-index 9d43923..21b18e2 100644
+index bcf99f1..d1ed6e1 100644
 --- a/src/mecca/reactor/package.d
 +++ b/src/mecca/reactor/package.d
 @@ -145,8 +145,13 @@ align(1):
@@ -110,17 +126,17 @@ index 9d43923..21b18e2 100644
 +            }
              DBG_ASSERT!"MAIN not set on main fiber"( flag!"MAIN" );
          }
-
+ 
 @@ -164,7 +169,6 @@ align(1):
-
+ 
      @notrace void switchTo(ReactorFiber* next) nothrow @trusted @nogc {
          pragma(inline, true);
 -        import core.thread: Thread;
-
+ 
          DRuntimeStackDescriptor* currentSD = stackDescriptor;
          DRuntimeStackDescriptor* nextSD = next.stackDescriptor;
 @@ -173,7 +177,13 @@ align(1):
-
+ 
          // Since druntime does not expose the interfaces needed for switching fibers, we need to hack around the
          // protection system to access Thread.m_curr, which is private.
 -        DRuntimeStackDescriptor** threadCurrentSD = cast(DRuntimeStackDescriptor**)&accessMember!("m_curr")(Thread.getThis());
@@ -132,5 +148,5 @@ index 9d43923..21b18e2 100644
 +            DRuntimeStackDescriptor** threadCurrentSD = cast(DRuntimeStackDescriptor**)&accessMember!("m_curr")(Thread.getThis());
 +        }
          *threadCurrentSD = nextSD;
-
+ 
          fibril.switchTo(next.fibril, &currentSD.tstack);

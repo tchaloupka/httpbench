@@ -2,8 +2,6 @@
 ///
 module http.Processor;
 
-
-
 import std.conv;
 import std.array, std.exception, std.format, std.algorithm.mutation, std.socket;
 import core.stdc.stdlib;
@@ -14,6 +12,7 @@ import hunt.io.ByteBuffer;
 import http.Common;
 import hunt.logging;
 import hunt.io;
+import hunt.io.channel.Common;
 import hunt.util.DateTime;
 import std.array;
 import std.string;
@@ -137,6 +136,7 @@ public:
 					//respondWith(ex.msg, 500);
 				}
 			}
+			return DataHandleStatus.Done;
 		})
 		.closed(() {
 			// notifyClientClosed();

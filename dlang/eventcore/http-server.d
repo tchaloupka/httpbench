@@ -1,6 +1,6 @@
 /++ dub.sdl:
     name "http-server"
-    dependency "eventcore" version=">=0.9.9"
+    dependency "eventcore" version=">=0.9.20"
 +/
 
 module http_server;

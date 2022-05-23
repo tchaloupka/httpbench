@@ -1,7 +1,7 @@
 #!/bin/env dub
 /+ dub.sdl:
     name "app"
-    dependency "during" version=">=0.3.0-rc"
+    dependency "during" version=">=0.3.0"
 +/
 
 import core.stdc.stdio;
