@@ -559,11 +559,11 @@ void genMarkdownTable(Benchmark[] benchmarks)
             maxName = max(maxName, b.name.length, "Name".length);
             maxErr = max(maxErr, b.err.length);
             maxRes = max(maxRes, b.res.length.to!string.length, "Res[B]".length);
-            maxRequests = max(maxRequests, b.stats.total.to!string.length, "Req".length);
+            maxRequests = max(maxRequests, b.stats.total.toSepStr.length, "Req".length);
             maxErrors = max(maxErrors, b.stats.errors.to!string.length, "Err".length);
             hasErrors |= b.stats.errors > 0;
-            maxRPS = max(maxRPS, b.stats.rps.to!string.length, "RPS".length);
-            maxBPS = max(maxBPS, b.bps.to!string.length, "BPS".length);
+            maxRPS = max(maxRPS, b.stats.rps.toSepStr.length, "RPS".length);
+            maxBPS = max(maxBPS, b.bps.toSepStr.length, "BPS".length);
             maxMed = max(maxMed, b.stats.med.to!string.length, "med".length);
             maxMin = max(maxMin, b.stats.min.to!string.length, "min".length);
             maxMax = max(maxMax, b.stats.max.to!string.length, "max".length);
@@ -648,10 +648,10 @@ void genMarkdownTable(Benchmark[] benchmarks)
                     b.category.to!string.pad(maxCat),
                     b.name.pad(maxName),
                     b.res.length.to!string.padLeft(maxRes),
-                    b.stats.total.to!string.padLeft(maxRequests),
+                    b.stats.total.toSepStr.padLeft(maxRequests),
                     b.stats.errors.to!string.padLeft(maxErrors),
-                    b.stats.rps.to!string.padLeft(maxRPS),
-                    b.bps.to!string.padLeft(maxBPS)
+                    b.stats.rps.toSepStr.padLeft(maxRPS),
+                    b.bps.toSepStr.padLeft(maxBPS)
                 ];
                 if (!hasErrors) cols = cols.remove(6);
                 if (!hasDiffRes) cols = cols.remove(4);
@@ -1094,6 +1094,11 @@ void killPid(int pid)
     enforce(kill(pid, SIGKILL) == 0, format!"Failed to send SIGKILL to %s: %s"(pid, errno));
     if (wait(pid)) return;
     throw new Exception("Failed to kill process");
+}
+
+string toSepStr(N)(N num)
+{
+    return format!"%,?d"(' ', num);
 }
 
 string getSuiteDir()
