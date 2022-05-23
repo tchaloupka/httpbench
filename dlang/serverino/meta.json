@@ -1,0 +1,12 @@
+[
+    {
+        "name": "serverino",
+        "type": "singleCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": ""
+        },
+        "runCmd": ["./app"]
+    }
+]

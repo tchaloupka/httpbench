@@ -98,6 +98,10 @@ Epoll and io_uring are added. Both named as `raw`.
 
 #### dlang
 
+##### [archttp](https://github.com/kerisy/archttp)
+
+New http server framework using async io (epoll, kqueue, ...).
+
 ##### [arsd-official](https://code.dlang.org/packages/arsd-official)
 
 I've wanted to add this popular library in the mix just for comparison. Currently three configurations of internal http servers are used:
@@ -141,6 +145,8 @@ Found this on [code.dlang.org](https://code.dlang.org/) so I've added it to the 
 
 It has parser, router, and response writer.
 
+**Note:** Currently it's disabled due to the https://github.com/etcimon/libasync/issues/90
+
 ##### [mecca](https://code.dlang.org/packages/mecca)
 
 Core library from [Weka](https://www.weka.io/).
@@ -154,6 +160,10 @@ It uses it's own low level fibers implementation.
 It's not on [code.dlang.org](https://code.dlang.org/) but is an interesting library that rewrites glibc syscalls and emulates them via epoll eventloop and fibers underneath.
 
 Test uses nodejs [http-parser](https://github.com/nodejs/http-parser) (not that fast as pico) and doesn't use router.
+
+##### [serverino](https://github.com/trikko/serverino)
+
+New simple to use HTTP server that uses managed subprocesses as a worker pool to handle individual requests. Single dependency library, using just standard phobos features.
 
 ##### [vibe-core](https://github.com/vibe-d/vibe-core)
 
