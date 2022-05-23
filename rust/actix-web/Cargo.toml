@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-actix-web = "2"
-actix-rt = "1.0"
+actix-web = { version = "4.0.1", default-features = false, features = ["macros"] }
+actix-rt = "2"
 num_cpus = "1.0"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1

@@ -4,6 +4,9 @@
         "type": "singleCore",
         "category": "platform",
         "buildCmd": ["cargo", "build", "--release"],
+        "buildEnv": {
+            "RUSTFLAGS": "-C target-cpu=native"
+        },
         "runCmd": ["./target/release/actix-raw"],
         "runEnv": {
             "WORKERS": "1"
@@ -14,6 +17,9 @@
         "type": "multiCore",
         "category": "platform",
         "buildCmd": ["cargo", "build", "--release"],
+        "buildEnv": {
+            "RUSTFLAGS": "-C target-cpu=native"
+        },
         "runCmd": ["./target/release/actix-raw"]
     }
 ]
