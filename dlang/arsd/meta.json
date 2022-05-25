@@ -19,6 +19,26 @@
         "category": "platform",
         "buildCmd": ["dub", "build", "-c", "hybrid"],
         "runCmd": ["./app", "--port", "8080"]
+    },
+    {
+        "name": "threads",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "-c", "threads"],
+        "runCmd": ["./app", "--port", "8080"]
+    },
+    {
+        "name": "processes",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "-c", "processes"],
+        "runCmd": ["./app", "--port", "8080"]
+    },
+    {
+        "name": "hybrid",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "-c", "hybrid"],
+        "runCmd": ["./app", "--port", "8080"]
     }
-
 ]
