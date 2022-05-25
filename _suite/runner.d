@@ -182,7 +182,7 @@ int runList(string[] args)
 {
     BenchmarkType benchType = BenchmarkType.all;
     auto opts = args.getopt(
-        "type", "Type of benchmarks to list - one of all, singleCore, multiCore (default: all)", &benchType,
+        "type|t", "Type of benchmarks to list - one of all, singleCore, multiCore (default: all)", &benchType,
     );
 
     if (opts.helpWanted)
@@ -199,16 +199,7 @@ int runList(string[] args)
     bool first;
     foreach (grp; benchmarks.chunkBy!(a => a.benchType))
     {
-        auto gbs = grp[1].array.sort!((a,b)
-        {
-            if (a.language < b.language) return true;
-            if (a.language == b.language)
-            {
-                if (a.framework < b.framework) return true;
-                if (a.framework == b.framework) return a.name < b.name;
-            }
-            return false;
-        });
+        auto gbs = grp[1].array;
 
         if (first) first = false;
         else writeln();
@@ -314,7 +305,7 @@ enum Tool { hey, wrk }
 enum Format { csv, markdown }
 string testURL;
 string remoteHost;
-int numReq = 64_000;        // number of requests to test
+int numReq;                 // number of requests to test
 int numClients = 64;        // number of workers to test with concurrently
 int reqTimeout = 10;        // number of seconds for request timeout
 string testPath;
@@ -348,14 +339,14 @@ int runBench(string[] args)
         // experimental - see #3
         "path|p", "URL path to call tests on. Default is '/' and currently tests implements just this one.", &testPath,
         // hey params
-        "n", "Number of requests to run with hey tool. Default is 50 000.", &numReq,
+        "n", "Number of requests to run with hey tool. Default is 1 000 per client.", &numReq,
         "c",
             "Number of workers to run concurrently for hey tool."
             ~ "Number of connections for wrk tool. Default is 64.",
             &numClients,
         "t", "Timeout for each request in seconds. Default is 10, use 0 for infinite.", &reqTimeout,
         "bestof|b", "Runs each test multiple times and outputs just the best one. Default is 1.", &bestOfNum,
-        "keepalive", "Should workload generator use same connection for multiple requests? Default true.", &keepalive,
+        "keepalive|k", "Should workload generator use same connection for multiple requests? Default true.", &keepalive,
         "tool", "Tool to use as a load generator. One of hey, wrk. Default is wrk.", &tool,
         "duration|d", "Duration of the individual test in seconds to use with wrk tool. Default is 10s.", &duration,
         "threads", "Total number of threads to use with wrk tool. Default is host number of CPUs.", &threads,
@@ -381,6 +372,8 @@ int runBench(string[] args)
         enforce(!verbose && !vverbose, "Quiet and verbose used at the same time");
         minLogLevel = LogLevel.none;
     }
+
+    if (!numReq) numReq = 1000 * numClients;
 
     if (host)
     {
@@ -422,18 +415,23 @@ int runBench(string[] args)
         if (numClients < threads) threads = numClients;
     }
 
-    pipeline = max(1, pipeline);
-    if (pipeline > 1 && remoteHost)
+    static bool copyScript(string name)
     {
-        // prep pipeline.lua on the host
-        DIAG("Copying pipeline.lua to host ", remoteHost);
-        auto pip = buildPath(getSuiteDir(), "pipeline.lua");
+        // prep wrk script on the host
+        DIAG("Copying ", name, " to host ", remoteHost);
+        auto pip = buildPath(getSuiteDir(), name);
         auto ret = execute(["scp", pip, remoteHost ~ ":/tmp/"]);
         if (ret.status != 0)
         {
             ERROR("Failed to copy ", pip, " to ", remoteHost, ": ", ret.output);
-            return 1;
+            return false;
         }
+        return true;
+    }
+
+    pipeline = max(1, pipeline);
+    if (remoteHost) {
+        if (!(pipeline > 1 ? copyScript("pipeline.lua") : copyScript("report.lua"))) return 1;
     }
 
     DIAG("Test url: ", testURL);
@@ -446,15 +444,16 @@ int runBench(string[] args)
 
     INFO("Benchmarks has been completed");
 
-    // sort results by median
+    // sort results
     benchmarks.sort!((a,b)
     {
         if (a.benchType < b.benchType) return true;
         if (a.benchType == b.benchType)
         {
-            if (a.err || b.err) return false;
-            //return a.med < b.med;
-            return a.stats.rps > b.stats.rps;
+            if (!a.err && !b.err) return a.stats.rps > b.stats.rps;
+            if (a.err && !b.err) return false;
+            if (!a.err && b.err) return true;
+            return a.err < b.err;
         }
         return false;
     });
@@ -517,8 +516,12 @@ auto loadBenchmarks(string[] tests = null, string ignore = null)
     benchmarks.sort!((a,b)
     {
         if (a.benchType < b.benchType) return true;
-        if (a.benchType == b.benchType) return a.name < b.name;
-        return false;
+        if (a.benchType > b.benchType) return false;
+        if (a.language < b.language) return true;
+        if (a.language > b.language) return false;
+        if (a.framework < b.framework) return true;
+        if (a.framework > b.framework) return false;
+        return a.name < b.name;
     });
 
     if (tests.length)
@@ -549,7 +552,7 @@ void genMarkdownTable(Benchmark[] benchmarks)
 
         // determine column sizes for even spaces in output
         size_t maxLang, maxCat, maxFW, maxName, maxErr, maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, maxMin, maxMax,
-            max25, max75, max90, max99, maxVals;
+            max25, max75, max99, maxVals;
         bool hasErrors, hasDiffRes;
         foreach (ref b; recs)
         {
@@ -567,19 +570,16 @@ void genMarkdownTable(Benchmark[] benchmarks)
             maxMed = max(maxMed, b.stats.med.to!string.length, "med".length);
             maxMin = max(maxMin, b.stats.min.to!string.length, "min".length);
             maxMax = max(maxMax, b.stats.max.to!string.length, "max".length);
-            max25 = max(max25, b.stats.under25.to!string.length, "25%".length);
-            max75 = max(max75, b.stats.under75.to!string.length, "75%".length);
-            max90 = max(max90, b.stats.under90.to!string.length, "90%".length);
-            max99 = max(max99, b.stats.under99.to!string.length, "99%".length);
+            max25 = max(max25, b.stats.perc25.to!string.length, "25%".length);
+            max75 = max(max75, b.stats.perc75.to!string.length, "75%".length);
+            max99 = max(max99, b.stats.perc99.to!string.length, "99%".length);
         }
 
         hasDiffRes = recs.map!(a => a.res.length).array.sort().uniq.walkLength > 1;
 
         if (maxErr)
         {
-            auto vals = tool == Tool.hey
-                ? [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMin, max25, maxMed, max75, max99, maxMax]
-                : [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMed, max75, max90, max99, maxMax];
+            auto vals = [maxRes, maxRequests, maxErrors, maxRPS, maxBPS, maxMin, max25, maxMed, max75, max99, maxMax];
             if (!hasErrors) vals = vals.remove(2);
             maxVals = (vals.length - 1) * 3 + vals.sum();
             if (maxVals < maxErr)
@@ -600,14 +600,10 @@ void genMarkdownTable(Benchmark[] benchmarks)
         if (!hasDiffRes) cols = cols.remove(4);
         if (hasErrors) cols ~= "Err".pad(maxErrors);
         cols ~= ["RPS".pad(maxRPS), "BPS".pad(maxBPS)];
-        if (tool == Tool.hey)
-            cols ~= [
-                "min".pad(maxMin), "25%".pad(max25), "50%".pad(maxMed),
-                "75%".pad(max75), "99%".pad(max99), "max".pad(maxMax)
-            ];
-        else cols ~= [
-                "50%".pad(maxMed), "75%".pad(max75), "90%".pad(max90), "99%".pad(max99), "max".pad(maxMax)
-            ];
+        cols ~= [
+            "min".pad(maxMin), "25%".pad(max25), "50%".pad(maxMed),
+            "75%".pad(max75), "99%".pad(max99), "max".pad(maxMax)
+        ];
         writeln("| ", cols.joiner(" | "), " |");
         auto pads = [maxRes, maxRequests, maxErrors, maxRPS, maxBPS];
         if (!hasErrors) pads = pads.remove(2);
@@ -616,10 +612,8 @@ void genMarkdownTable(Benchmark[] benchmarks)
             "|:",
             [maxLang, maxFW, maxCat, maxName].map!(a => pad!'-'(a)).joiner(":|:"), ":| ",
             pads.map!(a => pad!'-'(a)).joiner(":| "), ":| ",
-            (tool == Tool.hey
-                ? [maxMin, max25, maxMed, max75, max99, maxMax]
-                : [maxMed, max75, max90, max99, maxMax]
-            ).map!(a => pad!'-'(a))
+            [maxMin, max25, maxMed, max75, max99, maxMax]
+            .map!(a => pad!'-'(a))
                 .joiner(":| "),
             ":|"
         );
@@ -658,21 +652,14 @@ void genMarkdownTable(Benchmark[] benchmarks)
                 writeln(
                     "| ", cols.joiner(" | "),
                     " | ",
-                    (tool == Tool.hey
-                        ? [
-                            b.stats.min.to!string.padLeft(maxMin),
-                            b.stats.under25.to!string.padLeft(max25),
-                            b.stats.med.to!string.padLeft(maxMed),
-                            b.stats.under75.to!string.padLeft(max75),
-                            b.stats.under99.to!string.padLeft(max99),
-                            b.stats.max.to!string.padLeft(maxMax)]
-                        : [
-                            b.stats.med.to!string.padLeft(maxMed),
-                            b.stats.under75.to!string.padLeft(max75),
-                            b.stats.under90.to!string.padLeft(max90),
-                            b.stats.under99.to!string.padLeft(max99),
-                            b.stats.max.to!string.padLeft(maxMax)]
-                    ).joiner(" | "),
+                    [
+                        b.stats.min.to!string.padLeft(maxMin),
+                        b.stats.perc25.to!string.padLeft(max25),
+                        b.stats.med.to!string.padLeft(maxMed),
+                        b.stats.perc75.to!string.padLeft(max75),
+                        b.stats.perc99.to!string.padLeft(max99),
+                        b.stats.max.to!string.padLeft(maxMax)
+                    ].joiner(" | "),
                     " |");
             }
         }
@@ -684,11 +671,9 @@ void genCsvTable(Benchmark[] benchmarks)
 {
     enum string SEP = ";";
 
-    string[] cols = ["Type", "Language", "Framework", "Category", "Name", "Res[B]", "Req", "Err", "RPS", "BPS"];
-    if (tool == Tool.hey)
-        cols ~= ["min", "25%", "50%", "75%", "99%", "max"];
-    else
-        cols ~= ["50%", "75%", "90%", "99%", "max"];
+    string[] cols = [
+        "Type", "Language", "Framework", "Category", "Name", "Res[B]", "Req", "Err", "RPS", "BPS",
+        "min", "25%", "50%", "75%", "99%", "max"];
 
     writeln(cols.joiner(SEP));
     foreach (ref b; benchmarks)
@@ -705,27 +690,14 @@ void genCsvTable(Benchmark[] benchmarks)
             b.stats.total.to!string,
             b.stats.errors.to!string,
             b.stats.rps.to!string,
-            b.bps.to!string
+            b.bps.to!string,
+            b.stats.min.to!string,
+            b.stats.perc25.to!string,
+            b.stats.med.to!string,
+            b.stats.perc75.to!string,
+            b.stats.perc99.to!string,
+            b.stats.max.to!string
         ];
-
-        std.stdio.write(cols.joiner(SEP), SEP);
-        if (tool == Tool.hey)
-            cols = [
-                b.stats.min.to!string,
-                b.stats.under25.to!string,
-                b.stats.med.to!string,
-                b.stats.under75.to!string,
-                b.stats.under99.to!string,
-                b.stats.max.to!string
-            ];
-        else
-            cols = [
-                b.stats.med.to!string,
-                b.stats.under75.to!string,
-                b.stats.under90.to!string,
-                b.stats.under99.to!string,
-                b.stats.max.to!string
-            ];
 
         writeln(cols.joiner(SEP));
     }
@@ -926,9 +898,9 @@ Results parseHeyResults(string output)
     res.min     = times.length ? times[0] : 0;
     res.max     = times.length ? times[$-1] : 0;
     res.rps     = times.length ? cast(size_t)(res.total / res.time) : 0;
-    res.under25 = times.length ? times[$/4] : 0;
-    res.under75 = times.length ? times[3*$/4] : 0;
-    res.under99 = times.length ? times[cast(size_t)(ceil($ * 0.99))-1] : 0;
+    res.perc25 = times.length ? times[$/4] : 0;
+    res.perc75 = times.length ? times[3*$/4] : 0;
+    res.perc99 = times.length ? times[cast(size_t)(ceil($ * 0.99))-1] : 0;
     res.errors  = res.total - times.length;
     return res;
 }
@@ -936,7 +908,7 @@ Results parseHeyResults(string output)
 Results parseWrkResults(string output)
 {
     static auto maxReg = regex(`^\s+Latency\s+[0-9.]+\w+\s+[0-9.]+\w+\s+([0-9.]+)(\w+)`);
-    static auto latReg = regex(`^\s+(\d+)%\s+([0-9.]+)(\w+).*$`);
+    static auto latReg = regex(`^Custom stats: (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)$`);
     static auto totalReg = regex(`^\s+(\d+) requests in ([0-9.]+)(\w+)`);
     static auto errReg = regex(`^\s+Non-.*responses: (\d+)`);
 
@@ -954,14 +926,13 @@ Results parseWrkResults(string output)
         m = ln.matchFirst(latReg);
         if (m)
         {
-            switch (m[1])
-            {
-                case "50": res.med = m[2].to!double.toMsecs(m[3]); break;
-                case "75": res.under75 = m[2].to!double.toMsecs(m[3]); break;
-                case "90": res.under90 = m[2].to!double.toMsecs(m[3]); break;
-                case "99": res.under99 = m[2].to!double.toMsecs(m[3]); break;
-                default: break;
-            }
+            // all values are in usecs
+            res.min = m[1].to!size_t.toMsecs;
+            res.perc25 = m[2].to!size_t.toMsecs;
+            res.med = m[3].to!size_t.toMsecs;
+            res.perc75 = m[4].to!size_t.toMsecs;
+            res.perc99 = m[5].to!size_t.toMsecs;
+            res.max = m[6].to!size_t.toMsecs;
             continue;
         }
 
@@ -985,7 +956,7 @@ Results parseWrkResults(string output)
     return res;
 }
 
-double toMsecs(double time, string tm)
+double toMsecs(double time, string tm = "us")
 {
     switch (tm)
     {
@@ -1027,14 +998,16 @@ auto runWrk(uint clients, uint threads, int timeout, uint duration, uint pipelin
         testURL
     ];
 
-    if (pipeline > 1)
+    auto getScriptArgs(string name)
     {
         if (remoteHost)
-            args ~= ["-s", "/tmp/pipeline.lua", "--", pipeline.to!string];
+            return ["-s", "/tmp/" ~ name, "--", pipeline.to!string];
         else
-            args ~= ["-s", buildPath(getSuiteDir(), "pipeline.lua"), "--", pipeline.to!string];
+            return ["-s", buildPath(getSuiteDir(), name), "--", pipeline.to!string];
     }
 
+    if (pipeline > 1) args ~= getScriptArgs("pipeline.lua");
+    else args ~= getScriptArgs("report.lua");
     if (remoteHost) args = ["ssh", remoteHost, args.joiner(" ").text];
     return execute(args);
 }
@@ -1061,7 +1034,7 @@ void kill(in Benchmark bench, Pid pid)
     {
         foreach (ch; childPids) killPid(ch);
         childPids = getChildPids();
-        assert(!childPids.length, "Failed to kill all childs of " ~ bench.id);
+        assert(!childPids.length, format!"Failed to kill all childs of %s: %s"(bench.id, childPids));
     }
 }
 
@@ -1129,15 +1102,15 @@ struct Results
 {
     size_t total;   // total requests made
     double time;    // total time taken [s]
-    double med;
-    double min;
-    double max;
     size_t rps;
-    double under25;
-    double under75;
-    double under90;
-    double under99;
     size_t errors;
+
+    double min;
+    double perc25;
+    double med;
+    double perc75;
+    double perc99;
+    double max;
 }
 
 struct Benchmark
