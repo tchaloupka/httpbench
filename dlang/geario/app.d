@@ -13,6 +13,8 @@ import geario.net.TcpStream;
 
 import cpuid.unified;
 
+import std.conv : to;
+
 void main(string[] args)
 {
     static immutable ubyte[] response = cast(immutable ubyte[])(
