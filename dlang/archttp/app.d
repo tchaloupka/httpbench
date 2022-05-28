@@ -1,7 +1,7 @@
 #!/bin/env dub
 /+ dub.sdl:
     name "app"
-    dependency "archttp" version=">=1.0.0"
+    dependency "archttp" version=">=1.1.0"
 +/
 
 import archttp;
@@ -17,13 +17,11 @@ void main(string[] args)
     else
         app = new Archttp;
 
-    app.bind(8080);
-
     app.get("/", (HttpRequest req, HttpResponse res) {
         res.header("Content-Type", "text/plain");
         res.header("X-Test", "11111111111111111111111111111111111111111111");
         res.send("Hello, World!");
     });
 
-    app.run();
+    app.listen(8080);
 }
