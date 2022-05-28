@@ -2,6 +2,7 @@
 /+ dub.sdl:
     name "app"
     dependency "archttp" version=">=1.1.0"
+    dependency "mir-cpuid" version=">=1.2.7"
 +/
 
 import archttp;
