@@ -1,8 +1,16 @@
 [
     {
-        "name": "archttp",
+        "name": "geario (single)",
+        "type": "singleCore",
+        "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": ""
+        },
+        "runCmd": ["./app", "1"]
+    },
+    {
+        "name": "geario (multi)",
         "type": "multiCore",
-        "category": "platform",
         "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
         "buildEnv": {
             "DFLAGS": ""

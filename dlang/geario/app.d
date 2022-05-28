@@ -13,7 +13,7 @@ import geario.net.TcpStream;
 
 import cpuid.unified;
 
-void main()
+void main(string[] args)
 {
     static immutable ubyte[] response = cast(immutable ubyte[])(
                 "HTTP/1.1 200 OK\r\n"
@@ -28,7 +28,7 @@ void main()
     EventLoop loop = new EventLoop();
 
     TcpListener listener = new TcpListener(loop);
-    listener.Threads(threads);
+    listener.Threads((args.length > 1) ? args[1].to!uint : threads);
     listener.Bind(8080)
         .Accepted((TcpListener listener, TcpStream connection)
         {

@@ -8,14 +8,11 @@ import archttp;
 
 import std.conv : to;
 
+import cpuid.unified;
+
 void main(string[] args)
 {
-    Archttp app;
-
-    if (args.length > 1)
-        app = new Archttp(args[1].to!uint);
-    else
-        app = new Archttp;
+    Archttp app  = new Archttp((args.length > 1) ? args[1].to!uint : threads);
 
     app.get("/", (HttpRequest req, HttpResponse res) {
         res.header("Content-Type", "text/plain");
