@@ -473,12 +473,12 @@ To make it stand out more, here are some results with `hey` with number of clien
 
 | Language | Framework | Category |      Name      |  Req  |  RPS  |   BPS   | min | 25% | 50% | 75% | 99% | max |
 |:--------:|:---------:|:--------:|:--------------:| -----:| -----:| -------:| ---:| ---:| ---:| ---:| ---:| ---:|
-|   rust   | actix-web | platform |                | 2 000 | 19436 | 3731778 | 0.1 | 0.1 | 0.1 | 0.1 | 0.2 | 1.1 |
-|  dlang   |   arsd    | platform |    threads     | 2 000 | 18709 | 3592142 | 0.1 | 0.1 | 0.1 | 0.1 | 0.3 | 1.2 |
-|  dlang   |   arsd    | platform |   processes    | 2 000 | 17921 | 3440860 | 0.1 | 0.1 | 0.1 | 0.1 | 0.2 | 1.3 |
-|  dlang   |   arsd    | platform |     hybrid     | 2 000 | 17528 | 3365468 | 0.1 | 0.1 | 0.1 | 0.1 | 0.2 | 1.2 |
-|  dlang   | serverino | platform | serverino (16) | 2 000 | 16611 | 3189368 | 0.1 | 0.1 | 0.1 | 0.1 | 0.3 | 4.4 |
-|  dlang   | serverino | platform |   serverino    | 2 000 | 15625 | 3000000 | 0.1 | 0.1 | 0.1 | 0.1 | 0.3 | 1.1 |
+|   rust   | actix-web | platform |                | 2000 | 19436 | 3731778 | 0.1 | 0.1 | 0.1 | 0.1 | 0.2 | 1.1 |
+|  dlang   |   arsd    | platform |    threads     | 2000 | 18709 | 3592142 | 0.1 | 0.1 | 0.1 | 0.1 | 0.3 | 1.2 |
+|  dlang   |   arsd    | platform |   processes    | 2000 | 17921 | 3440860 | 0.1 | 0.1 | 0.1 | 0.1 | 0.2 | 1.3 |
+|  dlang   |   arsd    | platform |     hybrid     | 2000 | 17528 | 3365468 | 0.1 | 0.1 | 0.1 | 0.1 | 0.2 | 1.2 |
+|  dlang   | serverino | platform | serverino (16) | 2000 | 16611 | 3189368 | 0.1 | 0.1 | 0.1 | 0.1 | 0.3 | 4.4 |
+|  dlang   | serverino | platform |   serverino    | 2000 | 15625 | 3000000 | 0.1 | 0.1 | 0.1 | 0.1 | 0.3 | 1.1 |
 
 ##### 64 concurrent clients
 
