@@ -18,5 +18,16 @@
             "DFLAGS": ""
         },
         "runCmd": ["./app"]
+    },
+    {
+        "name": "serverino (16)",
+        "type": "multiCore",
+        "category": "platform",
+        "buildCmd": ["dub", "build", "--combined", "--single", "app.d"],
+        "buildEnv": {
+            "DFLAGS": ""
+        },
+        "runCmd": ["./app"],
+        "runEnv": { "WORKERS": "16" }
     }
 ]

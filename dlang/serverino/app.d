@@ -16,9 +16,14 @@ void hello(const Request req, Output output)
 @onServerInit
 auto setup()
 {
+    import std.conv : to;
     import std.parallelism : totalCPUs;
+    import std.process : environment;
+
     ServerinoConfig sc = ServerinoConfig.create();
-    sc.setWorkers(totalCPUs);
+    auto workers = environment.get("WORKERS");
+    if (workers !is null) sc.setWorkers(workers.to!int);
+    else sc.setWorkers(totalCPUs);
     sc.enableKeepAlive();
     return sc;
 }
