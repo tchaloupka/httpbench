@@ -137,6 +137,10 @@ It's a microbenchmark as it has no proper http parser, router or response writer
 * callbacks - uses just callbacks to handle socket events
 * fibers - uses fibers to emulate sync behavior on async events
 
+##### [geario](https://github.com/kerisy/geario)
+
+Asynchronous I/O library used by [archttp](https://github.com/kerisy/archttp) to show event base loop performance (micro benchmark).
+
 ##### [hunt](https://github.com/huntlabs/hunt-framework)
 
 * hunt-http - idiomatic use of the framework (HTTP router, parser and all)
