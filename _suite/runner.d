@@ -307,7 +307,7 @@ string testURL;
 string remoteHost;
 int numReq;                 // number of requests to test
 int numClients = 64;        // number of workers to test with concurrently
-int reqTimeout = 10;        // number of seconds for request timeout
+int reqTimeout = 60;        // number of seconds for request timeout
 string testPath;
 int bestOfNum = 1;
 bool keepalive = true;
@@ -476,39 +476,39 @@ auto loadBenchmarks(string[] tests = null, string ignore = null)
     auto benchmarks = rootDir.dirEntries("meta.json", SpanMode.depth).filter!(a => a.isFile)
         .map!((m)
         {
+            try
+            {
                 auto j = m.name.readText.parseJSON();
                 return j.array.map!((t)
                 {
-                    try
-                    {
-                        Benchmark res;
-                        auto p = m.name[rootDir.length+1..$].pathSplitter;
-                        res.language = p.front; p.popFront;
-                        res.framework = p.front;
-                        auto pname = "name" in t;
-                        if (pname && !(*pname).isNull) res.name = (*pname).str;
-                        res.benchType = t["type"].str.to!BenchmarkType;
-                        auto pcat = "category" in t;
-                        if (pcat && !(*pcat).isNull) res.category = (*pcat).str.to!Category;
-                        auto ppre = "preCmd" in t;
-                        if (ppre && !(*ppre).isNull) res.preCmd = (*ppre).array.map!(a => a.str).array;
-                        auto pbld = "buildCmd" in t;
-                        if (pbld && !(*pbld).isNull) res.buildCmd = (*pbld).array.map!(a => a.str).array;
-                        res.runCmd = t["runCmd"].array.map!(a => a.str).array;
-                        auto pbe = "buildEnv" in t;
-                        if (pbe && !(*pbe).isNull) res.buildEnv = (*pbe).object.byKeyValue.map!(a => tuple(a.key, a.value.str)).assocArray;
-                        auto pre = "runEnv" in t;
-                        if (pre && !(*pre).isNull) res.runEnv = (*pre).object.byKeyValue.map!(a => tuple(a.key, a.value.str)).assocArray;
-                        res.workDir = m.name.dirName;
+                    Benchmark res;
+                    auto p = m.name[rootDir.length+1..$].pathSplitter;
+                    res.language = p.front; p.popFront;
+                    res.framework = p.front;
+                    auto pname = "name" in t;
+                    if (pname && !(*pname).isNull) res.name = (*pname).str;
+                    res.benchType = t["type"].str.to!BenchmarkType;
+                    auto pcat = "category" in t;
+                    if (pcat && !(*pcat).isNull) res.category = (*pcat).str.to!Category;
+                    auto ppre = "preCmd" in t;
+                    if (ppre && !(*ppre).isNull) res.preCmd = (*ppre).array.map!(a => a.str).array;
+                    auto pbld = "buildCmd" in t;
+                    if (pbld && !(*pbld).isNull) res.buildCmd = (*pbld).array.map!(a => a.str).array;
+                    res.runCmd = t["runCmd"].array.map!(a => a.str).array;
+                    auto pbe = "buildEnv" in t;
+                    if (pbe && !(*pbe).isNull) res.buildEnv = (*pbe).object.byKeyValue.map!(a => tuple(a.key, a.value.str)).assocArray;
+                    auto pre = "runEnv" in t;
+                    if (pre && !(*pre).isNull) res.runEnv = (*pre).object.byKeyValue.map!(a => tuple(a.key, a.value.str)).assocArray;
+                    res.workDir = m.name.dirName;
 
-                        res.runCmd[0] = res.runCmd[0].fixLocal(res.workDir);
-                        if (res.preCmd.length) res.preCmd[0] = res.preCmd[0].fixLocal(res.workDir);
-                        if (res.buildCmd.length) res.buildCmd[0] = res.buildCmd[0].fixLocal(res.workDir);
-                        res.applyDefaultBuildEnv();
-                        return res;
-                    }
-                    catch (Exception ex) throw new Exception(format!"Failed to parse benchmark metadata from %s: %s"(m.name, ex.msg));
+                    res.runCmd[0] = res.runCmd[0].fixLocal(res.workDir);
+                    if (res.preCmd.length) res.preCmd[0] = res.preCmd[0].fixLocal(res.workDir);
+                    if (res.buildCmd.length) res.buildCmd[0] = res.buildCmd[0].fixLocal(res.workDir);
+                    res.applyDefaultBuildEnv();
+                    return res;
                 });
+            }
+            catch (Exception ex) throw new Exception(format!"Failed to parse benchmark metadata from %s: %s"(m.name, ex.msg));
         })
         .joiner
         .array;
@@ -565,7 +565,7 @@ void genMarkdownTable(Benchmark[] benchmarks)
             maxRequests = max(maxRequests, b.stats.total.toSepStr.length, "Req".length);
             maxErrors = max(maxErrors, b.stats.errors.to!string.length, "Err".length);
             hasErrors |= b.stats.errors > 0;
-            maxRPS = max(maxRPS, b.stats.rps.toSepStr.length, "RPS".length);
+            maxRPS = max(maxRPS, b.stats.rps.format!"%.2f".length, "RPS".length);
             maxBPS = max(maxBPS, b.bps.toSepStr.length, "BPS".length);
             maxMed = max(maxMed, b.stats.med.to!string.length, "med".length);
             maxMin = max(maxMin, b.stats.min.to!string.length, "min".length);
@@ -644,7 +644,7 @@ void genMarkdownTable(Benchmark[] benchmarks)
                     b.res.length.to!string.padLeft(maxRes),
                     b.stats.total.toSepStr.padLeft(maxRequests),
                     b.stats.errors.to!string.padLeft(maxErrors),
-                    b.stats.rps.toSepStr.padLeft(maxRPS),
+                    b.stats.rps.format!"%.2f".padLeft(maxRPS),
                     b.bps.toSepStr.padLeft(maxBPS)
                 ];
                 if (!hasErrors) cols = cols.remove(6);
@@ -843,7 +843,7 @@ void warmup(ref Benchmark bench)
 
     // warmup with benchmark tool
     auto ret = tool == Tool.hey
-        ? runHey(numReq / 10, numClients, 5)
+        ? runHey(max(numReq / 10, numClients), numClients, 5)
         : runWrk(numClients, threads, reqTimeout, max(1, duration / 10));
     enforce(ret.status == 0, "Warmup failed: " ~ ret.output);
     TRACE(ret.output);
@@ -864,7 +864,7 @@ void test(ref Benchmark bench)
             enforce(ret.status == 0, "Test failed: " ~ ret.output);
 
             Results tmp = tool == Tool.hey ? ret.output.parseHeyResults() : ret.output.parseWrkResults();
-            DIAG("RPS: ", tmp.total / tmp.time);
+            // DIAG("RPS: ", tmp.total / tmp.time);
             if (!res.total || (res.total <= tmp.total && (res.total / res.time) < (tmp.total / tmp.time)))
                 res = tmp;
         }
@@ -878,31 +878,43 @@ void test(ref Benchmark bench)
 
 Results parseHeyResults(string output)
 {
+    TRACE(output);
     Results res;
+    res.time = 0;
     auto times = output.lineSplitter.drop(1)
         .tee!(a => res.total++)
         .map!((line)
         {
             auto cols = line.splitter(',');
-            auto time = cols.front.to!double * 1_000;
+            auto time = cols.front.to!double; // in seconds
             cols = cols.drop(6);
             auto status = cols.front.to!int;
             cols.popFront;
-            res.time = cols.front.to!double;
-            return tuple(time, status);
+            res.time = max(res.time, cols.front.to!double + time); // offset + time
+            return tuple(time*1_000, status); // to msecs
         })
         .filter!(a => a[1] == 200)
-        .map!(a => a[0]).array.sort;
+        .map!(a => a[0]).array;
+    times.sort();
 
-    res.med     = times.length ? times[$/2] : 0;
     res.min     = times.length ? times[0] : 0;
     res.max     = times.length ? times[$-1] : 0;
-    res.rps     = times.length ? cast(size_t)(res.total / res.time) : 0;
-    res.perc25 = times.length ? times[$/4] : 0;
-    res.perc75 = times.length ? times[3*$/4] : 0;
-    res.perc99 = times.length ? times[cast(size_t)(ceil($ * 0.99))-1] : 0;
+    res.rps     = times.length ? (res.total / res.time) : 0;
+    res.med     = times.length ? times.percentile(0.5) : 0;
+    res.perc25 = times.length ? times.percentile(0.25) : 0;
+    res.perc75 = times.length ? times.percentile(0.75) : 0;
+    res.perc99 = times.length ? times.percentile(0.99) : 0;
     res.errors  = res.total - times.length;
     return res;
+}
+
+double percentile(double[] data, double frac)
+in (frac >= 0 && frac <= 1.0, "Invalid percentile")
+in (data.length, "No data")
+{
+    double rank = frac*(data.length-1);
+    auto idx = cast(size_t)trunc(rank);
+    return data[idx] + (data[idx+1]-data[idx])*(rank-idx);
 }
 
 Results parseWrkResults(string output)
@@ -952,7 +964,7 @@ Results parseWrkResults(string output)
         }
     }
 
-    res.rps = res.total ? cast(size_t)(res.total / res.time) : 0;
+    res.rps = res.total ? (res.total / res.time) : 0;
     return res;
 }
 
@@ -1000,10 +1012,14 @@ auto runWrk(uint clients, uint threads, int timeout, uint duration, uint pipelin
 
     auto getScriptArgs(string name)
     {
+        string[] ret = ["-s"];
         if (remoteHost)
-            return ["-s", "/tmp/" ~ name, "--", pipeline.to!string];
+            ret ~= ("/tmp/" ~ name);
         else
-            return ["-s", buildPath(getSuiteDir(), name), "--", pipeline.to!string];
+            ret ~= buildPath(getSuiteDir(), name);
+
+        if (pipeline) ret ~= ["--", pipeline.to!string];
+        return ret;
     }
 
     if (pipeline > 1) args ~= getScriptArgs("pipeline.lua");
@@ -1034,7 +1050,7 @@ void kill(in Benchmark bench, Pid pid)
     {
         foreach (ch; childPids) killPid(ch);
         childPids = getChildPids();
-        assert(!childPids.length, format!"Failed to kill all childs of %s: %s"(bench.id, childPids));
+        if (childPids.length) WARN(format!"Failed to kill all childs of %s: %s"(bench.id, childPids));
     }
 }
 
@@ -1102,7 +1118,7 @@ struct Results
 {
     size_t total;   // total requests made
     double time;    // total time taken [s]
-    size_t rps;
+    double rps;
     size_t errors;
 
     double min;
