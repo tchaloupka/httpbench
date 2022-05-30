@@ -21,7 +21,7 @@ void main(string[] args)
                 "HTTP/1.1 200 OK\r\n"
                 ~ "Server: Geario\r\n"
                 ~ "Connection: keep-alive\r\n"
-                ~ "X-Test: 01231231231231231234\r\n"
+                ~ "X-Test: 0123123123123123123401231231231231231234012312312312312312340123\r\n"
                 ~ "Content-Type: text/plain\r\n"
                 ~ "Content-Length: 13\r\n"
                 ~ "\r\n"
